@@ -56,6 +56,11 @@ class GameStorage {
         this.saveData();
     }
 
+    addCredit(amount) {
+        this.data.credit += amount;
+        this.saveData();
+    }
+
     addBig() {
         this.data.bigCount++;
         this.saveData();
