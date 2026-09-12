@@ -374,9 +374,10 @@ class SlotGame {
     }
 
     addCredit(amount) {
+        if (!Number.isFinite(amount) || amount <= 0) return false;
         this.credit += amount;
-        storage.loadData();
-        this.credit = storage.data.credit;
+        storage.addCredit(amount);
+        return true;
     }
 }
 
