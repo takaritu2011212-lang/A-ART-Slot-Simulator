@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A+ART パチスロシミュレーター</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <header class="header">
+            <h1>🎰 A+ART パチスロシミュレーター</h1>
+            <p class="subtitle">完全仕様書準拠版</p>
+        </header>
+
+        <!-- メインゲーム画面 -->
+        <div class="game-section">
+            <!-- 状態表示 -->
+            <div class="status-bar">
+                <div class="status-info">
+                    <span id="gameState" class="state-badge state-normal">通常時</span>
+                    <span id="currentG" class="g-display">残り: --G</span>
+                </div>
+            </div>
+
+            <!-- リール表示 -->
+            <div class="reel-container">
+                <div class="reel">
+                    <div class="reel-display" id="reel1">-</div>
+                    <div class="reel-label">左</div>
+                </div>
+                <div class="reel">
+                    <div class="reel-display" id="reel2">-</div>
+                    <div class="reel-label">中</div>
+                </div>
+                <div class="reel">
+                    <div class="reel-display" id="reel3">-</div>
+                    <div class="reel-label">右</div>
+                </div>
+            </div>
+
+            <!-- 役示唆色表示 -->
+            <div id="hintDisplay" class="hint-display">
+                <div id="hintBox" class="hint-box"></div>
+            </div>
+
+            <!-- 成立役表示 -->
+            <div class="result-display">
+                <div id="resultRole" class="result-role">---</div>
+                <div id="resultPayment" class="result-payment">0枚</div>
+            </div>
+
+            <!-- ゲーム操作ボタン -->
+            <div class="controls">
+                <div class="bet-section">
+                    <button id="betBtn" class="btn btn-bet">BET 3枚</button>
+                    <span id="betDisplay" class="bet-display">0枚</span>
+                </div>
+                <button id="startBtn" class="btn btn-start">スタート</button>
+                <div class="stop-section">
+                    <button id="stop1Btn" class="btn btn-stop">停止1</button>
+                    <button id="stop2Btn" class="btn btn-stop">停止2</button>
+                    <button id="stop3Btn" class="btn btn-stop">停止3</button>
+                </div>
+            </div>
+
+            <!-- 現在の枚数表示 -->
+            <div class="credit-display">
+                <div class="credit-item">
+                    <span class="label">所持枚数:</span>
+                    <span id="credit" class="value">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- データカウンター -->
+        <div class="stats-section">
+            <h2>📊 統計データ</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">総ゲーム数</div>
+                    <div class="stat-value" id="totalGames">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">総投入</div>
+                    <div class="stat-value" id="totalBet">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">総払出</div>
+                    <div class="stat-value" id="totalPayout">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">機械割</div>
+                    <div class="stat-value" id="percentage">0%</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">BIG</div>
+                    <div class="stat-value" id="bigCount">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">REG</div>
+                    <div class="stat-value" id="regCount">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">ART初回</div>
+                    <div class="stat-value" id="artCount">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">ART総G</div>
+                    <div class="stat-value" id="artTotalG">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">平均ART</div>
+                    <div class="stat-value" id="avgArtG">0G</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">参戦</div>
+                    <div class="stat-value" id="sankuCount">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">バースト</div>
+                    <div class="stat-value" id="burstCount">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">設定</div>
+                    <div class="stat-value" id="settingDisplay">1</div>
+                </div>
+            </div>
+
+            <!-- 操作ボタン -->
+            <div class="action-buttons">
+                <button id="resetBtn" class="btn btn-secondary">データリセット</button>
+                <div class="setting-control">
+                    <label for="settingSelect">設定:</label>
+                    <select id="settingSelect">
+                        <option value="1">設定1</option>
+                        <option value="2">設定2</option>
+                        <option value="3">設定3</option>
+                        <option value="4">設定4</option>
+                        <option value="5">設定5</option>
+                        <option value="6">設定6</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- フッター -->
+        <footer class="footer">
+            <p>A+ART方式パチスロ機 完全仕様書準拠シミュレーター</p>
+            <p>開発版 v0.1.0</p>
+        </footer>
+    </div>
+
+    <script src="js/constants.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
