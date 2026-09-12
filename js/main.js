@@ -12,6 +12,7 @@ class GameController {
     initializeElements() {
         this.elements = {
             betBtn: document.getElementById('betBtn'),
+            addCreditBtn: document.getElementById('addCreditBtn'),
             startBtn: document.getElementById('startBtn'),
             stop1Btn: document.getElementById('stop1Btn'),
             stop2Btn: document.getElementById('stop2Btn'),
@@ -23,6 +24,7 @@ class GameController {
 
     attachEventListeners() {
         this.elements.betBtn.addEventListener('click', () => this.onBet());
+        this.elements.addCreditBtn.addEventListener('click', () => this.onAddCredit());
         this.elements.startBtn.addEventListener('click', () => this.onStart());
         this.elements.stop1Btn.addEventListener('click', () => this.onStop1());
         this.elements.stop2Btn.addEventListener('click', () => this.onStop2());
@@ -37,6 +39,13 @@ class GameController {
         game.credit = stats.credit;
         this.elements.settingSelect.value = stats.setting;
         renderer.updateAll();
+    }
+
+    onAddCredit() {
+        const amount = 1000;
+        if (game.addCredit(amount)) {
+            renderer.updateCredit();
+        }
     }
 
     onBet() {
