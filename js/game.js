@@ -1,196 +1,31 @@
 // ゲームロジック・状態管理
-
 class SlotGame {
-    constructor() {
-        this.setting = 1;
-        this.state = GAME_STATE.NORMAL;
-        this.currentG = 0;
-        this.artG = 0;
-        this.credit = 0;
-        this.artStock = 0;
-        this.bet = 0;
-        this.result = null;
-        this.hintRole = null;
-        this.currentRole = null;
-        this.payment = 0;
-        this.hasBonus = false;
-        this.bonusType = null;
-        this.bonusPending = false;
-        this.bonusCountdown = 0;
-        this.bonusSourceRole = null;
-        this.fakePrecursorG = 0;
-        this.fakePrecursorKind = null;
-        this.spinInProgress = false;
-        this.inAttackTime = false;
-        this.inReverse = false;
-        this.burstStock = 0;
-        this.challengeG = 0;
-        this.pendingPayout = 0;
-        this.bonusGameG = 0;
-        this.bonusPayout = 0;
-        this.bonusStarted = false;
-        this.presentation = null;
-    }
-
-    setSetting(setting) {
-        if (setting < 1 || setting > 6) return;
-        this.setting = setting;
-        storage.setSetting(setting);
-    }
-
-    placeBet() {
-        if (this.state !== GAME_STATE.NORMAL || this.bet > 0 || this.credit < BET_AMOUNT) return false;
-        this.bet = BET_AMOUNT;
-        this.credit -= BET_AMOUNT;
-        this.payment = 0;
-        this.result = null;
-        return true;
-    }
-
-    drawRole() {
-        const roles = this.state === GAME_STATE.NORMAL ? NORMAL_ROLES : ART_ROLES;
-        const entries = Object.values(roles);
-        const totalProb = entries.reduce((sum, role) => sum + role.prob, 0);
-        const rand = Math.random() * totalProb;
-        let cumulative = 0;
-        for (const role of entries) {
-            cumulative += role.prob;
-            if (rand < cumulative) return role;
-        }
-        return entries[entries.length - 1];
-    }
-
-    roll() {
-        if (this.state !== GAME_STATE.NORMAL || this.bet <= 0) return false;
-        this.currentRole = this.drawRole();
-        this.hintRole = this.currentRole;
-        this.payment = this.currentRole.payment || 0;
-        this.hasBonus = false;
-        this.bonusType = null;
-        this.pendingPayout = 0;
-        this.spinInProgress = true;
-        this.checkBonus();
-        return true;
-    }
-
-    checkBonus() {
-        if (!this.currentRole || this.bonusPending) return;
-        const rates = BONUS_TRIGGER_RATES[this.setting];
-        let rate = 0;
-        const name = this.currentRole.name;
-        if (name.includes('チャンス目')) rate = rates.CHANCE;
-        else if (name.includes('強チェリー')) rate = rates.STRONG_CHERRY;
-        else if (name.includes('スイカ')) rate = rates.WATERMELON;
-        else if (name.includes('弱チェリー')) rate = rates.WEAK_CHERRY;
-        else if (this.currentRole.isLose) rate = rates.LOSE;
-        if (Math.random() < rate) {
-            this.hasBonus = true;
-            this.bonusPending = true;
-            this.bonusType = Math.random() < 0.4 ? 'BIG' : 'REG';
-            this.bonusCountdown = 2 + Math.floor(Math.random() * 4);
-            this.bonusSourceRole = this.currentRole;
-            this.fakePrecursorG = 0;
-        } else {
-            this.startFakePrecursorIfNeeded();
-        }
-    }
-
-    startFakePrecursorIfNeeded() {
-        if (this.bonusPending || this.fakePrecursorG > 0) return;
-        const name = this.currentRole?.name || '';
-        let chance = 0.045;
-        if (name.includes('強チェリー') || name.includes('チャンス目')) chance = 0.34;
-        else if (name.includes('スイカ') || name.includes('弱チェリー')) chance = 0.16;
-        if (Math.random() < chance) this.fakePrecursorG = 2 + Math.floor(Math.random() * 3);
-    }
-
-    advanceNormalPresentation() {
-        if (this.bonusPending) {
-            this.bonusCountdown--;
-            return this.bonusCountdown <= 0;
-        }
-        if (this.fakePrecursorG > 0) this.fakePrecursorG--;
-        return false;
-    }
-
-    announceBonus() {
-        if (!this.bonusPending) return false;
-        this.bonusPayout = this.bonusType === 'BIG' ? BIG_PAYMENT : REG_PAYMENT;
-        this.pendingPayout = this.bonusPayout;
-        this.bonusPending = false;
-        this.bonusCountdown = 0;
-        this.bonusStarted = true;
-        this.hasBonus = true;
-        this.state = this.bonusType === 'BIG' ? GAME_STATE.BONUS_BIG : GAME_STATE.BONUS_REG;
-        return true;
-    }
-
-    startBonus() { return this.announceBonus(); }
-
-    finishBonus() {
-        this.state = GAME_STATE.CHALLENGE;
-        this.challengeG = CHALLENGE_G;
-        this.bonusStarted = false;
-    }
-
-    processBonus() { return false; }
-    processArt() { this.artG = Math.max(0, this.artG - 1); if (this.artG <= 0) this.endArt(); }
-    processArtAddon() {}
-    processSansen() { this.currentG--; if (this.currentG <= 0) this.state = GAME_STATE.ART; }
-    processBurst() { this.currentG--; if (this.currentG <= 0) this.state = GAME_STATE.ART; }
-    endBurst() { this.state = GAME_STATE.ART; }
-    selectBurstTable() { return 'A'; }
-    processAttackTime() { this.currentG--; if (this.currentG <= 0) this.state = GAME_STATE.ART; }
-
-    processChallenge() {
-        if (this.challengeG <= 0) this.challengeG = CHALLENGE_G;
-        this.challengeG--;
-        if (this.challengeG <= 0) this.state = GAME_STATE.NORMAL;
-    }
-
-    startArt() {
-        this.state = GAME_STATE.ART;
-        this.artG = ART_INITIAL_G;
-        storage.addArt(ART_INITIAL_G);
-    }
-
-    endArt() {
-        this.artG = 0;
-        this.state = GAME_STATE.NORMAL;
-    }
-
-    resetSpin() {
-        this.state = GAME_STATE.NORMAL;
-        this.currentG = 0;
-        this.artG = 0;
-        this.bet = 0;
-        this.result = null;
-        this.hintRole = null;
-        this.currentRole = null;
-        this.payment = 0;
-        this.hasBonus = false;
-        this.bonusType = null;
-        this.bonusPending = false;
-        this.bonusCountdown = 0;
-        this.bonusSourceRole = null;
-        this.fakePrecursorG = 0;
-        this.fakePrecursorKind = null;
-        this.spinInProgress = false;
-        this.pendingPayout = 0;
-        this.challengeG = 0;
-        this.bonusGameG = 0;
-        this.bonusPayout = 0;
-        this.bonusStarted = false;
-    }
-
-    reset() { this.resetSpin(); this.artStock = 0; this.burstStock = 0; }
-
-    addCredit(amount) {
-        if (!Number.isFinite(amount) || amount <= 0) return false;
-        this.credit += amount;
-        storage.addCredit(amount);
-        return true;
-    }
+ constructor(){this.setting=1;this.state=GAME_STATE.NORMAL;this.currentG=0;this.artG=0;this.credit=0;this.artStock=0;this.bet=0;this.result=null;this.hintRole=null;this.currentRole=null;this.payment=0;this.hasBonus=false;this.bonusType=null;this.bonusPending=false;this.bonusCountdown=0;this.bonusSourceRole=null;this.fakePrecursorG=0;this.fakePrecursorKind=null;this.spinInProgress=false;this.inAttackTime=false;this.inReverse=false;this.burstStock=0;this.challengeG=0;this.pendingPayout=0;this.bonusGameG=0;this.bonusPayout=0;this.bonusStarted=false;this.bonusRemaining=0;this.challengeSmall=false;this.challengeSuccess=false;}
+ setSetting(s){if(s<1||s>6)return;this.setting=s;storage.setSetting(s);}
+ placeBet(){if(this.state!==GAME_STATE.NORMAL||this.bet>0||this.credit<BET_AMOUNT)return false;this.bet=BET_AMOUNT;this.credit-=BET_AMOUNT;this.payment=0;this.result=null;return true;}
+ drawByAbsoluteProbability(roles){let r=Math.random(),c=0,a=Object.values(roles);for(const x of a){c+=x.prob;if(r<c)return x;}return roles.LOSE||roles.ART_LOSE||a[a.length-1];}
+ roll(){if(this.state!==GAME_STATE.NORMAL||this.bet<=0)return false;this.currentRole=this.drawByAbsoluteProbability(NORMAL_ROLES);this.hintRole=this.currentRole;this.payment=this.currentRole.payment||0;this.hasBonus=false;this.bonusType=null;this.pendingPayout=0;this.spinInProgress=true;this.checkBonus();return true;}
+ checkBonus(){if(!this.currentRole||this.bonusPending)return;const r=BONUS_TRIGGER_RATES[this.setting],n=this.currentRole.name;let p=0;if(n.includes('チャンス目'))p=r.CHANCE;else if(n.includes('強チェリー'))p=r.STRONG_CHERRY;else if(n.includes('スイカ'))p=r.WATERMELON;else if(n.includes('弱チェリー'))p=r.WEAK_CHERRY;else if(this.currentRole.isLose)p=r.LOSE;if(Math.random()<p){this.hasBonus=true;this.bonusPending=true;this.bonusType=Math.random()<0.4?'BIG':'REG';this.bonusCountdown=2+Math.floor(Math.random()*4);this.bonusSourceRole=this.currentRole;this.fakePrecursorG=0;}else this.startFakePrecursorIfNeeded();}
+ startFakePrecursorIfNeeded(){if(this.bonusPending||this.fakePrecursorG>0)return;const n=this.currentRole?.name||'';let p=n.includes('強チェリー')||n.includes('チャンス目')?.34:n.includes('スイカ')||n.includes('弱チェリー')?.16:.045;if(Math.random()<p)this.fakePrecursorG=2+Math.floor(Math.random()*3);}
+ advanceNormalPresentation(){if(this.bonusPending){this.bonusCountdown--;return this.bonusCountdown<=0;}if(this.fakePrecursorG>0)this.fakePrecursorG--;return false;}
+ announceBonus(){if(!this.bonusPending)return false;this.bonusPayout=this.bonusType==='BIG'?BIG_PAYMENT:REG_PAYMENT;this.pendingPayout=this.bonusPayout;this.bonusPending=false;this.bonusCountdown=0;this.bonusStarted=true;this.bonusRemaining=this.bonusPayout;this.hasBonus=true;if(this.bonusType==='BIG')storage.addBig();else storage.addReg();this.state=this.bonusType==='BIG'?GAME_STATE.BONUS_BIG:GAME_STATE.BONUS_REG;return true;}
+ startBonus(){return this.announceBonus();}
+ startBonusSpin(){if((this.state!==GAME_STATE.BONUS_BIG&&this.state!==GAME_STATE.BONUS_REG)||this.spinInProgress||this.bonusRemaining<=0)return false;this.currentRole={name:'押し順ベル',payment:Math.min(BONUS_BELL_PAYMENT,this.bonusRemaining),color:'yellow'};this.hintRole=this.currentRole;this.payment=0;this.spinInProgress=true;return true;}
+ finishBonusSpin(){if(!this.spinInProgress)return false;const p=this.currentRole?.payment||0;this.credit+=p;storage.addPayout(p);this.bonusRemaining-=p;this.bonusGameG++;this.spinInProgress=false;if(this.bonusRemaining<=0){this.bonusStarted=false;this.hasBonus=false;this.pendingPayout=0;this.state=GAME_STATE.CHALLENGE;this.challengeG=CHALLENGE_G;storage.addChallenge();return'CHALLENGE';}return'BONUS';}
+ startChallengeSpin(){if(this.state!==GAME_STATE.CHALLENGE||this.spinInProgress||this.challengeG<=0)return false;const small=Math.random()<CHALLENGE_SMALL_ROLE_PROB;let role;if(small){let r=Math.random(),c=0;for(const[k,v]of Object.entries(CHALLENGE_ROLE_RATES)){c+=v;if(r<c){role=NORMAL_ROLES[k];break;}}role=role||NORMAL_ROLES.BELL_3;}else role=Math.random()<.5?NORMAL_ROLES.REPLAY:NORMAL_ROLES.LOSE;this.challengeSmall=small;this.currentRole=role;this.hintRole=role;this.payment=0;this.challengeSuccess=false;this.spinInProgress=true;return true;}
+ finishChallengeSpin(){if(!this.spinInProgress)return false;this.spinInProgress=false;if(this.challengeSmall&&Math.random()<CHALLENGE_SUCCESS_RATE){this.challengeSuccess=true;this.challengeG=0;storage.addChallengeWin();this.startArt();return'ART';}this.challengeG--;if(this.challengeG<=0){this.state=GAME_STATE.NORMAL;this.challengeG=0;this.bonusType=null;this.hasBonus=false;return'NORMAL';}return'CHALLENGE';}
+ processChallenge(){return this.finishChallengeSpin();}
+ processArt(){this.artG=Math.max(0,this.artG-1);this.processArtAddon();if(this.artG<=0){if(this.artStock>0){this.artStock--;this.artG=ART_INITIAL_G;}else this.endArt();}}
+ processArtAddon(){if(!this.currentRole||this.currentRole.isLose)return;const n=this.currentRole.name;let i=null;if(n.includes('弱チェリー'))i=ART_ADDON_RATES.WEAK_CHERRY;else if(n.includes('スイカ'))i=ART_ADDON_RATES.WATERMELON;else if(n.includes('強チェリー'))i=ART_ADDON_RATES.STRONG_CHERRY;else if(n.includes('チャンス目'))i=ART_ADDON_RATES.CHANCE;if(!i||Math.random()>=i.normal)return;const t=(this.highProbUpGame||0)>0?i.tables.highG:i.tables.normal;let r=Math.random(),c=0;for(const e of t){c+=e.prob;if(r<c){this.artG+=e.add;break;}}}
+ processSansen(){this.currentG--;if(this.currentG<=0){this.state=GAME_STATE.ART;this.currentG=0;}}
+ processBurst(){this.currentG--;const n=this.currentRole?.name||'';if(n.includes('弱チェリー'))this.burstStock++;else if(n.includes('強チェリー')||n.includes('チャンス目'))this.burstStock+=2;else if(n.includes('ベル')&&Math.random()<.5)this.burstStock++;if(this.currentG<=0)this.endBurst();}
+ endBurst(){this.state=GAME_STATE.ART;this.currentG=0;if(this.burstStock<=0){this.state=GAME_STATE.REVERSE;this.inReverse=true;return;}const t=this.selectBurstTable(),a=BURST_REWARD_AMOUNTS[t];this.artG+=a[Math.floor(Math.random()*a.length)];}
+ selectBurstTable(){const t=BURST_REWARD_TABLES[Math.min(this.burstStock,6)];let r=Math.random(),c=0;for(const[k,p]of Object.entries(t)){c+=p;if(r<c)return k;}return'A';}
+ processAttackTime(){if(this.currentG<=0)return;this.currentG--;const n=this.currentRole?.name||'';let a=ATTACK_TIME_ADDON.REPLAY;if(n.includes('弱チェリー'))a=ATTACK_TIME_ADDON.WEAK_CHERRY;else if(n.includes('強チェリー'))a=ATTACK_TIME_ADDON.STRONG_CHERRY;else if(n.includes('ベル'))a=ATTACK_TIME_ADDON.BELL_11;this.artG+=a;if(this.currentG<=0){this.state=GAME_STATE.ART;this.inAttackTime=false;}}
+ startArt(){this.state=GAME_STATE.ART;this.artG=ART_INITIAL_G;this.currentG=0;this.inAttackTime=false;this.inReverse=false;storage.addArt(ART_INITIAL_G);}
+ endArt(){this.artG=0;this.state=GAME_STATE.NORMAL;this.currentG=0;this.inAttackTime=false;this.inReverse=false;}
+ resetSpin(){this.state=GAME_STATE.NORMAL;this.currentG=0;this.artG=0;this.bet=0;this.result=null;this.hintRole=null;this.currentRole=null;this.payment=0;this.hasBonus=false;this.bonusType=null;this.bonusPending=false;this.bonusCountdown=0;this.bonusSourceRole=null;this.fakePrecursorG=0;this.fakePrecursorKind=null;this.spinInProgress=false;this.pendingPayout=0;this.challengeG=0;this.inAttackTime=false;this.inReverse=false;this.bonusGameG=0;this.bonusPayout=0;this.bonusStarted=false;this.bonusRemaining=0;this.challengeSmall=false;this.challengeSuccess=false;}
+ reset(){this.resetSpin();this.artStock=0;this.burstStock=0;}
+ addCredit(a){if(!Number.isFinite(a)||a<=0)return false;this.credit+=a;storage.addCredit(a);return true;}
 }
-
-const game = new SlotGame();
+const game=new SlotGame();
