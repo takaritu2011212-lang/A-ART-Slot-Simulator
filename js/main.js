@@ -12,6 +12,7 @@ class GameController {
     initializeElements() {
         this.elements = {
             betBtn: document.getElementById('betBtn'),
+            maxBetBtn: document.getElementById('maxBetBtn'),
             addCreditBtn: document.getElementById('addCreditBtn'),
             startBtn: document.getElementById('startBtn'),
             stop1Btn: document.getElementById('stop1Btn'),
@@ -24,6 +25,7 @@ class GameController {
 
     attachEventListeners() {
         this.elements.betBtn.addEventListener('click', () => this.onBet());
+        this.elements.maxBetBtn.addEventListener('click', () => this.onMaxBet());
         this.elements.addCreditBtn.addEventListener('click', () => this.onAddCredit());
         this.elements.startBtn.addEventListener('click', () => this.onStart());
         this.elements.stop1Btn.addEventListener('click', () => this.onStop1());
@@ -54,15 +56,28 @@ class GameController {
             return;
         }
 
+        if (game.bet > 0) {
+            return;
+        }
+
         if (game.credit < BET_AMOUNT) {
             alert('クレジット不足です');
             return;
         }
 
-        game.placeBet();
+        if (!game.placeBet()) {
+            return;
+        }
+
         this.elements.betBtn.disabled = true;
+        this.elements.maxBetBtn.disabled = true;
         this.elements.startBtn.disabled = false;
-        renderer.updateCredit();
+        renderer.updateAll();
+    }
+
+    onMaxBet() {
+        // 現仕様ではMAXBETは3枚BETと同義
+        this.onBet();
     }
 
     onStart() {
@@ -73,17 +88,14 @@ class GameController {
 
         this.isSpinning = true;
         this.stopsCount = 0;
-
-        // ゲーム実行
         game.roll();
 
-        // ボーナス判定
         if (game.hasBonus) {
             game.startBonus();
         }
 
-        // UI更新
         this.elements.betBtn.disabled = true;
+        this.elements.maxBetBtn.disabled = true;
         this.elements.startBtn.disabled = true;
         this.elements.stop1Btn.disabled = false;
         this.elements.stop2Btn.disabled = false;
@@ -95,28 +107,19 @@ class GameController {
     onStop1() {
         this.stopsCount++;
         this.updateStopButtons();
-        
-        if (this.stopsCount === 3) {
-            this.endSpin();
-        }
+        if (this.stopsCount === 3) this.endSpin();
     }
 
     onStop2() {
         this.stopsCount++;
         this.updateStopButtons();
-        
-        if (this.stopsCount === 3) {
-            this.endSpin();
-        }
+        if (this.stopsCount === 3) this.endSpin();
     }
 
     onStop3() {
         this.stopsCount++;
         this.updateStopButtons();
-        
-        if (this.stopsCount === 3) {
-            this.endSpin();
-        }
+        if (this.stopsCount === 3) this.endSpin();
     }
 
     updateStopButtons() {
@@ -129,14 +132,13 @@ class GameController {
         this.isSpinning = false;
         this.stopsCount = 0;
 
-        // 払出処理
         if (game.payment > 0 && !game.currentRole.isLose) {
             game.credit += game.payment;
             storage.addGame(0, game.payment);
         }
 
-        // UI更新
         this.elements.betBtn.disabled = false;
+        this.elements.maxBetBtn.disabled = false;
         this.elements.startBtn.disabled = false;
         this.elements.stop1Btn.disabled = true;
         this.elements.stop2Btn.disabled = true;
@@ -145,7 +147,6 @@ class GameController {
 
         renderer.updateAll();
 
-        // 次ゲームへ
         setTimeout(() => {
             game.reset();
             renderer.updateAll();
@@ -170,7 +171,6 @@ class GameController {
     }
 }
 
-// ページ読み込み完了時に初期化
 document.addEventListener('DOMContentLoaded', () => {
     const controller = new GameController();
     console.log('🎰 A+ART パチスロシミュレーター 起動完了');
