@@ -33,7 +33,7 @@ class SlotGame {
         storage.setSetting(setting);
     }
 
-    bet() {
+    placeBet() {
         this.bet = BET_AMOUNT;
         this.credit -= BET_AMOUNT;
         storage.addGame(BET_AMOUNT, 0);
