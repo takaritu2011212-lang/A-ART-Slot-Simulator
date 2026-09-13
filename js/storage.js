@@ -35,15 +35,25 @@ class GameStorage {
     resetData() { this.data = this.getDefaultData(); this.saveData(); }
     setSetting(setting) { this.data.setting = setting; this.saveData(); }
 
+    // ベット時点でクレジットを確定して減算する。
+    // これにより、ベット中にリロードしても3枚が復活しない。
+    removeCredit(amount) {
+        if (!Number.isFinite(amount) || amount <= 0 || this.data.credit < amount) return false;
+        this.data.credit -= amount;
+        this.saveData();
+        return true;
+    }
+
+    // 通常ゲーム終了時は、ベット分はすでにベット時に減算済みなので、
+    // ここではゲーム数・総ベット・総払出の記録だけを更新する。
     addGame(bet, payout) {
         this.data.totalGames++;
         this.data.totalBet += bet;
         this.data.totalPayout += payout;
-        this.data.credit += payout - bet;
         this.saveData();
     }
 
-    // 前兆後のボーナス告知など、ゲーム数を増やさず払出だけを記録する。
+    // ボーナス中など、ゲーム数を増やさず払出だけを記録する。
     addPayout(amount) {
         if (!Number.isFinite(amount) || amount <= 0) return;
         this.data.totalPayout += amount;
@@ -51,7 +61,11 @@ class GameStorage {
         this.saveData();
     }
 
-    addCredit(amount) { this.data.credit += amount; this.saveData(); }
+    addCredit(amount) {
+        if (!Number.isFinite(amount) || amount <= 0) return;
+        this.data.credit += amount;
+        this.saveData();
+    }
     addBig() { this.data.bigCount++; this.saveData(); }
     addReg() { this.data.regCount++; this.saveData(); }
     addEpisode() { this.data.episodeCount++; this.saveData(); }
