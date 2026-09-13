@@ -8,118 +8,34 @@
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <h1>🎰 A+ART パチスロシミュレーター</h1>
-            <p class="subtitle">完全仕様書準拠版</p>
-        </header>
-
+        <header class="header"><h1>🎰 A+ART パチスロシミュレーター</h1><p class="subtitle">完全仕様書準拠版</p></header>
         <div class="game-section">
-            <div class="status-bar">
-                <div class="status-info">
-                    <span id="gameState" class="state-badge state-normal">通常時</span>
-                    <span id="currentG" class="g-display">残り: --G</span>
-                </div>
-            </div>
-
+            <div class="status-bar"><div class="status-info"><span id="gameState" class="state-badge state-normal">通常時</span><span id="currentG" class="g-display">残り: --G</span></div></div>
             <div class="reel-machine">
-                <div class="reel-window">
-                    <div class="reel-strip" id="reelStrip1">
-                        <div class="reel-symbol">BAR</div><div class="reel-symbol">7</div><div class="reel-symbol">ベル</div>
-                    </div>
-                </div>
-                <div class="reel-window">
-                    <div class="reel-strip" id="reelStrip2">
-                        <div class="reel-symbol">スイカ</div><div class="reel-symbol">リプ</div><div class="reel-symbol">チェリー</div>
-                    </div>
-                </div>
-                <div class="reel-window">
-                    <div class="reel-strip" id="reelStrip3">
-                        <div class="reel-symbol">ベル</div><div class="reel-symbol">BAR</div><div class="reel-symbol">7</div>
-                    </div>
-                </div>
+                <div class="reel-window"><div class="reel-strip" id="reelStrip1"><div class="reel-symbol">BAR</div><div class="reel-symbol">7</div><div class="reel-symbol">ベル</div></div></div>
+                <div class="reel-window"><div class="reel-strip" id="reelStrip2"><div class="reel-symbol">スイカ</div><div class="reel-symbol">リプ</div><div class="reel-symbol">チェリー</div></div></div>
+                <div class="reel-window"><div class="reel-strip" id="reelStrip3"><div class="reel-symbol">ベル</div><div class="reel-symbol">BAR</div><div class="reel-symbol">7</div></div></div>
             </div>
-
-            <div class="reel-labels">
-                <span>左</span><span>中</span><span>右</span>
-            </div>
-
-            <div id="hintDisplay" class="hint-display">
-                <div id="hintBox" class="hint-box"></div>
-            </div>
-
+            <div class="reel-labels"><span>左</span><span>中</span><span>右</span></div>
+            <div id="hintDisplay" class="hint-display"><div id="hintBox" class="hint-box"></div></div>
             <div id="演出テキスト" class="演出-text" aria-live="polite">レバーを叩いてください。</div>
-
-            <div class="result-display">
-                <div id="resultRole" class="result-role">---</div>
-                <div id="resultPayment" class="result-payment">0枚</div>
-            </div>
-
+            <div class="result-display"><div id="resultRole" class="result-role">---</div><div id="resultPayment" class="result-payment">0枚</div></div>
             <div class="controls">
-                <div class="bet-section">
-                    <button id="betBtn" class="btn btn-bet">BET 3枚</button>
-                    <button id="maxBetBtn" class="btn btn-bet">MAXBET</button>
-                    <span id="betDisplay" class="bet-display">0枚</span>
-                </div>
+                <div class="bet-section"><button id="betBtn" class="btn btn-bet">BET 3枚</button><button id="maxBetBtn" class="btn btn-bet">MAXBET</button><span id="betDisplay" class="bet-display">0枚</span></div>
                 <button id="startBtn" class="btn btn-start">スタート</button>
-                <div class="stop-section">
-                    <button id="stop1Btn" class="btn btn-stop">停止1</button>
-                    <button id="stop2Btn" class="btn btn-stop">停止2</button>
-                    <button id="stop3Btn" class="btn btn-stop">停止3</button>
-                </div>
+                <div class="stop-section"><button id="stop1Btn" class="btn btn-stop">停止1</button><button id="stop2Btn" class="btn btn-stop">停止2</button><button id="stop3Btn" class="btn btn-stop">停止3</button></div>
             </div>
-
-            <div class="credit-display">
-                <div class="credit-item">
-                    <span class="label">所持枚数:</span>
-                    <span id="credit" class="value">0</span>
-                </div>
-            </div>
-
-            <div class="credit-add-section">
-                <button id="addCreditBtn" class="btn btn-credit">クレジット +1000枚</button>
-            </div>
+            <div class="credit-display"><div class="credit-item"><span class="label">所持枚数:</span><span id="credit" class="value">0</span></div></div>
+            <div class="credit-add-section"><button id="addCreditBtn" class="btn btn-credit">クレジット +1000枚</button></div>
         </div>
-
         <div class="stats-section">
-            <h2>📊 統計データ</h2>
-            <div class="stats-grid">
-                <div class="stat-box"><div class="stat-label">総ゲーム数</div><div class="stat-value" id="totalGames">0</div></div>
-                <div class="stat-box"><div class="stat-label">総投入</div><div class="stat-value" id="totalBet">0</div></div>
-                <div class="stat-box"><div class="stat-label">総払出</div><div class="stat-value" id="totalPayout">0</div></div>
-                <div class="stat-box"><div class="stat-label">機械割</div><div class="stat-value" id="percentage">0%</div></div>
-                <div class="stat-box"><div class="stat-label">BIG</div><div class="stat-value" id="bigCount">0</div></div>
-                <div class="stat-box"><div class="stat-label">REG</div><div class="stat-value" id="regCount">0</div></div>
-                <div class="stat-box"><div class="stat-label">ART初回</div><div class="stat-value" id="artCount">0</div></div>
-                <div class="stat-box"><div class="stat-label">ART総G</div><div class="stat-value" id="artTotalG">0</div></div>
-                <div class="stat-box"><div class="stat-label">平均ART</div><div class="stat-value" id="avgArtG">0G</div></div>
-                <div class="stat-box"><div class="stat-label">参戦</div><div class="stat-value" id="sankuCount">0</div></div>
-                <div class="stat-box"><div class="stat-label">バースト</div><div class="stat-value" id="burstCount">0</div></div>
-                <div class="stat-box"><div class="stat-label">設定</div><div class="stat-value" id="settingDisplay">1</div></div>
+            <h2>📊 統計データ</h2><div class="stats-grid">
+                <div class="stat-box"><div class="stat-label">総ゲーム数</div><div class="stat-value" id="totalGames">0</div></div><div class="stat-box"><div class="stat-label">総投入</div><div class="stat-value" id="totalBet">0</div></div><div class="stat-box"><div class="stat-label">総払出</div><div class="stat-value" id="totalPayout">0</div></div><div class="stat-box"><div class="stat-label">機械割</div><div class="stat-value" id="percentage">0%</div></div><div class="stat-box"><div class="stat-label">BIG</div><div class="stat-value" id="bigCount">0</div></div><div class="stat-box"><div class="stat-label">REG</div><div class="stat-value" id="regCount">0</div></div><div class="stat-box"><div class="stat-label">ART初回</div><div class="stat-value" id="artCount">0</div></div><div class="stat-box"><div class="stat-label">ART総G</div><div class="stat-value" id="artTotalG">0</div></div><div class="stat-box"><div class="stat-label">平均ART</div><div class="stat-value" id="avgArtG">0G</div></div><div class="stat-box"><div class="stat-label">参戦</div><div class="stat-value" id="sankuCount">0</div></div><div class="stat-box"><div class="stat-label">バースト</div><div class="stat-value" id="burstCount">0</div></div><div class="stat-box"><div class="stat-label">設定</div><div class="stat-value" id="settingDisplay">1</div></div>
             </div>
-
-            <div class="action-buttons">
-                <button id="resetBtn" class="btn btn-secondary">データリセット</button>
-                <div class="setting-control">
-                    <label for="settingSelect">設定:</label>
-                    <select id="settingSelect">
-                        <option value="1">設定1</option><option value="2">設定2</option><option value="3">設定3</option>
-                        <option value="4">設定4</option><option value="5">設定5</option><option value="6">設定6</option>
-                    </select>
-                </div>
-            </div>
+            <div class="action-buttons"><button id="resetBtn" class="btn btn-secondary">データリセット</button><div class="setting-control"><label for="settingSelect">設定:</label><select id="settingSelect"><option value="1">設定1</option><option value="2">設定2</option><option value="3">設定3</option><option value="4">設定4</option><option value="5">設定5</option><option value="6">設定6</option></select></div></div>
         </div>
-
-        <footer class="footer">
-            <p>A+ART方式パチスロ機 完全仕様書準拠シミュレーター</p>
-            <p>開発版 v0.3.0</p>
-        </footer>
+        <footer class="footer"><p>A+ART方式パチスロ機 完全仕様書準拠シミュレーター</p><p>開発版 v0.3.0</p></footer>
     </div>
-
-    <script src="js/constants.js"></script>
-    <script src="js/storage.js"></script>
-    <script src="js/audio.js"></script>
-    <script src="js/game.js"></script>
-    <script src="js/renderer.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/constants.js"></script><script src="js/storage.js"></script><script src="js/audio.js"></script><script src="js/game.js"></script><script src="js/renderer_v2.js"></script><script src="js/main.js"></script>
 </body>
 </html>
