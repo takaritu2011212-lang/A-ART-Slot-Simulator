@@ -3,10 +3,11 @@
 class GameController {
     constructor() {
         this.isSpinning = false;
-        this.stopsCount = 0;
+        this.stoppedReels = new Set();
         this.initializeElements();
         this.attachEventListeners();
         this.loadInitialState();
+        this.setIdleButtons();
     }
 
     initializeElements() {
@@ -28,44 +29,43 @@ class GameController {
         this.elements.maxBetBtn.addEventListener('click', () => this.onMaxBet());
         this.elements.addCreditBtn.addEventListener('click', () => this.onAddCredit());
         this.elements.startBtn.addEventListener('click', () => this.onStart());
-        this.elements.stop1Btn.addEventListener('click', () => this.onStop1());
-        this.elements.stop2Btn.addEventListener('click', () => this.onStop2());
-        this.elements.stop3Btn.addEventListener('click', () => this.onStop3());
+        this.elements.stop1Btn.addEventListener('click', () => this.onStop(1));
+        this.elements.stop2Btn.addEventListener('click', () => this.onStop(2));
+        this.elements.stop3Btn.addEventListener('click', () => this.onStop(3));
         this.elements.resetBtn.addEventListener('click', () => this.onReset());
         this.elements.settingSelect.addEventListener('change', (e) => this.onSettingChange(e));
     }
 
     loadInitialState() {
         const stats = storage.getStats();
-        game.setSetting(stats.setting);
+        game.setting = stats.setting;
         game.credit = stats.credit;
         this.elements.settingSelect.value = stats.setting;
         renderer.updateAll();
     }
 
+    setIdleButtons() {
+        const hasBet = game.bet > 0;
+        this.elements.betBtn.disabled = hasBet || this.isSpinning;
+        this.elements.maxBetBtn.disabled = hasBet || this.isSpinning;
+        this.elements.startBtn.disabled = !hasBet || this.isSpinning;
+        this.elements.stop1Btn.disabled = true;
+        this.elements.stop2Btn.disabled = true;
+        this.elements.stop3Btn.disabled = true;
+    }
+
     onAddCredit() {
-        const amount = 1000;
-        if (game.addCredit(amount)) {
-            renderer.updateCredit();
-        }
+        if (this.isSpinning) return;
+        if (game.addCredit(1000)) renderer.updateAll();
     }
 
     onBet() {
-        if (game.state !== GAME_STATE.NORMAL) {
-            alert('ゲーム中のベットはできません');
-            return;
-        }
-
-        if (game.bet > 0) {
-            return;
-        }
-
-        if (game.credit < BET_AMOUNT) {
-            alert('クレジット不足です');
-            return;
-        }
+        if (this.isSpinning) return;
+        if (game.state !== GAME_STATE.NORMAL) return;
+        if (game.bet > 0) return;
 
         if (!game.placeBet()) {
+            alert('クレジット不足です');
             return;
         }
 
@@ -76,102 +76,100 @@ class GameController {
     }
 
     onMaxBet() {
-        // 現仕様ではMAXBETは3枚BETと同義
+        // 現仕様では3枚掛けなので、MAXBETも3枚を一度に投入する。
         this.onBet();
     }
 
     onStart() {
-        if (game.bet === 0) {
-            alert('先にBETしてください');
-            return;
-        }
+        if (this.isSpinning || game.bet <= 0) return;
+        if (!game.roll()) return;
 
         this.isSpinning = true;
-        this.stopsCount = 0;
-        game.roll();
-
-        if (game.hasBonus) {
-            game.startBonus();
-        }
+        this.stoppedReels.clear();
 
         this.elements.betBtn.disabled = true;
         this.elements.maxBetBtn.disabled = true;
         this.elements.startBtn.disabled = true;
         this.elements.stop1Btn.disabled = false;
-        this.elements.stop2Btn.disabled = false;
-        this.elements.stop3Btn.disabled = false;
-
+        this.elements.stop2Btn.disabled = true;
+        this.elements.stop3Btn.disabled = true;
         renderer.updateAll();
     }
 
-    onStop1() {
-        this.stopsCount++;
-        this.updateStopButtons();
-        if (this.stopsCount === 3) this.endSpin();
-    }
+    onStop(reelNumber) {
+        if (!this.isSpinning) return;
+        if (this.stoppedReels.has(reelNumber)) return;
 
-    onStop2() {
-        this.stopsCount++;
-        this.updateStopButtons();
-        if (this.stopsCount === 3) this.endSpin();
-    }
+        // 左第一停止を強制。2・3停止は左停止後ならどちらからでもよい。
+        if (reelNumber !== 1 && !this.stoppedReels.has(1)) return;
 
-    onStop3() {
-        this.stopsCount++;
+        this.stoppedReels.add(reelNumber);
         this.updateStopButtons();
-        if (this.stopsCount === 3) this.endSpin();
+
+        if (this.stoppedReels.size === 3) this.endSpin();
     }
 
     updateStopButtons() {
-        this.elements.stop1Btn.disabled = this.stopsCount >= 1;
-        this.elements.stop2Btn.disabled = this.stopsCount >= 2;
-        this.elements.stop3Btn.disabled = this.stopsCount >= 3;
+        const firstStopped = this.stoppedReels.has(1);
+        this.elements.stop1Btn.disabled = !this.isSpinning || firstStopped;
+        this.elements.stop2Btn.disabled = !this.isSpinning || !firstStopped || this.stoppedReels.has(2);
+        this.elements.stop3Btn.disabled = !this.isSpinning || !firstStopped || this.stoppedReels.has(3);
     }
 
     endSpin() {
-        this.isSpinning = false;
-        this.stopsCount = 0;
+        if (!this.isSpinning) return;
 
-        if (game.payment > 0 && !game.currentRole.isLose) {
-            game.credit += game.payment;
-            storage.addGame(0, game.payment);
+        this.isSpinning = false;
+
+        const bet = game.bet;
+        const rolePayment = game.currentRole?.payment || 0;
+        const bonusPayment = game.pendingPayout || 0;
+        const payout = Math.max(rolePayment, bonusPayment);
+
+        // クレジットへの払い出しはここで一度だけ行う。
+        game.credit += payout;
+        storage.addGame(bet, payout);
+
+        if (game.hasBonus || game.pendingPayout > 0) {
+            if (game.bonusType === 'BIG') storage.addBig();
+            else if (game.bonusType === 'REG') storage.addReg();
         }
 
-        this.elements.betBtn.disabled = false;
-        this.elements.maxBetBtn.disabled = false;
-        this.elements.startBtn.disabled = false;
-        this.elements.stop1Btn.disabled = true;
-        this.elements.stop2Btn.disabled = true;
-        this.elements.stop3Btn.disabled = true;
+        // 次ゲームをBETできる状態に戻す。結果表示は残す。
         game.bet = 0;
+        game.state = GAME_STATE.NORMAL;
+        game.hasBonus = false;
+        game.bonusType = null;
+        game.pendingPayout = 0;
+        game.inAttackTime = false;
+        game.inReverse = false;
+        this.stoppedReels.clear();
 
+        this.setIdleButtons();
         renderer.updateAll();
-
-        setTimeout(() => {
-            game.reset();
-            renderer.updateAll();
-        }, 500);
     }
 
     onReset() {
-        if (confirm('データをリセットしますか？')) {
-            storage.resetData();
-            game.credit = 0;
-            game.reset();
-            renderer.updateAll();
-            alert('データをリセットしました');
-        }
+        if (!confirm('データをリセットしますか？')) return;
+        storage.resetData();
+        game.credit = 0;
+        game.reset();
+        this.isSpinning = false;
+        this.stoppedReels.clear();
+        this.elements.settingSelect.value = game.setting;
+        this.setIdleButtons();
+        renderer.updateAll();
+        alert('データをリセットしました');
     }
 
     onSettingChange(e) {
-        const newSetting = parseInt(e.target.value);
+        const newSetting = parseInt(e.target.value, 10);
         game.setSetting(newSetting);
-        storage.setSetting(newSetting);
-        renderer.updateStats();
+        renderer.updateAll();
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const controller = new GameController();
-    console.log('🎰 A+ART パチスロシミュレーター 起動完了');
+    window.gameController = new GameController();
+    console.log('A+ART パチスロシミュレーター 起動完了');
 });
