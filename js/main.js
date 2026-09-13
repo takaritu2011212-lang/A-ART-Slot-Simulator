@@ -59,9 +59,7 @@ class GameController {
             return;
         }
 
-        // SlotGameでは「bet」が現在のBET枚数とメソッド名で衝突しているため、
-        // プロトタイプ上のBET処理を明示的に呼び出す。
-        SlotGame.prototype.bet.call(game);
+        game.placeBet();
         this.elements.betBtn.disabled = true;
         this.elements.startBtn.disabled = false;
         renderer.updateCredit();
