@@ -3,6 +3,7 @@ class RendererV3 {
  pick(a){return a[Math.floor(Math.random()*a.length)];}
  setEffectText(s,k='normal'){const x=this.e.text;x.classList.remove('flash','effect-normal','effect-chance','effect-strong','effect-bonus');void x.offsetWidth;x.textContent=s;x.classList.add('flash','effect-'+k);}
  clearResult(){this.e.role.textContent='---';this.e.pay.textContent='0枚';}
+ showNormalResult(){this.updateResult();}
  symbols(){return['7','BAR','ベル','リプ','スイカ','チェリー'];}
  target(role,i){const n=role?.name||'';if(n.includes('BIG'))return'7';if(n.includes('REG'))return'BAR';if(n.includes('押し順ベル')||n.includes('ベル'))return'ベル';if(n.includes('リプレイ'))return'リプ';if(n.includes('スイカ'))return'スイカ';if(n.includes('チェリー'))return'チェリー';if(n.includes('チャンス'))return i===2?'7':'BAR';return i===2?'7':'BAR';}
  setSymbol(i,s){const x=this.e['r'+i];x.innerHTML=`<div class="reel-symbol">${s}</div><div class="reel-symbol">${s}</div><div class="reel-symbol">${s}</div>`;x.style.transform='translateY(-70px)';}
