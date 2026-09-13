@@ -20,6 +20,10 @@ class SlotGame {
         this.burstStock = 0;
         this.challengeG = 0;
         this.pendingPayout = 0;
+        this.bonusGameG = 0;
+        this.bonusPayout = 0;
+        this.bonusStarted = false;
+        this.presentation = null;
     }
 
     setSetting(setting) {
@@ -34,6 +38,7 @@ class SlotGame {
         this.credit -= BET_AMOUNT;
         this.payment = 0;
         this.result = null;
+        this.presentation = null;
         return true;
     }
 
@@ -45,6 +50,7 @@ class SlotGame {
         this.hasBonus = false;
         this.bonusType = null;
         this.pendingPayout = 0;
+        this.bonusStarted = false;
         this.checkBonus();
         if (this.hasBonus) {
             this.pendingPayout = this.bonusType === 'BIG' ? BIG_PAYMENT : REG_PAYMENT;
@@ -88,6 +94,36 @@ class SlotGame {
         }
     }
 
+    startBonus() {
+        const type = this.bonusType || 'REG';
+        this.bonusPayout = type === 'BIG' ? BIG_PAYMENT : REG_PAYMENT;
+        this.pendingPayout = this.bonusPayout;
+        this.payment = this.bonusPayout;
+        this.bonusStarted = true;
+        this.bonusGameG = type === 'BIG' ? 1 : 1;
+        this.hasBonus = false;
+        this.state = type === 'BIG' ? GAME_STATE.BONUS_BIG : GAME_STATE.BONUS_REG;
+        return true;
+    }
+
+    finishBonus() {
+        const type = this.bonusType;
+        const isBig = type === 'BIG';
+        this.state = GAME_STATE.CHALLENGE;
+        this.challengeG = CHALLENGE_G;
+        this.bonusGameG = 0;
+        this.bonusStarted = false;
+        if (isBig) storage.addBig();
+        else storage.addReg();
+    }
+
+    processBonus() {
+        if (!this.bonusStarted) return false;
+        this.bonusGameG--;
+        if (this.bonusGameG <= 0) this.finishBonus();
+        return true;
+    }
+
     processArt() {
         this.artG = Math.max(0, this.artG - 1);
         this.processArtAddon();
@@ -110,7 +146,8 @@ class SlotGame {
         else if (name.includes('強チェリー')) info = ART_ADDON_RATES.STRONG_CHERRY;
         else if (name.includes('チャンス目')) info = ART_ADDON_RATES.CHANCE;
         if (!info || Math.random() >= info.normal) return;
-        const table = this.highProbUpGame > 0 ? info.tables.highG : info.tables.normal;
+        const highUpGame = this.highProbUpGame || 0;
+        const table = highUpGame > 0 ? info.tables.highG : info.tables.normal;
         const rand = Math.random();
         let cum = 0;
         for (const entry of table) {
@@ -192,15 +229,8 @@ class SlotGame {
             this.state = GAME_STATE.NORMAL;
             this.currentG = 0;
             this.challengeG = 0;
+            this.bonusType = null;
         }
-    }
-
-    startBonus() {
-        const type = this.bonusType || 'REG';
-        this.pendingPayout = type === 'BIG' ? BIG_PAYMENT : REG_PAYMENT;
-        this.payment = this.pendingPayout;
-        this.hasBonus = false;
-        this.state = type === 'BIG' ? GAME_STATE.BONUS_BIG : GAME_STATE.BONUS_REG;
     }
 
     startArt() {
@@ -235,6 +265,10 @@ class SlotGame {
         this.challengeG = 0;
         this.inAttackTime = false;
         this.inReverse = false;
+        this.bonusGameG = 0;
+        this.bonusPayout = 0;
+        this.bonusStarted = false;
+        this.presentation = null;
     }
 
     reset() {
