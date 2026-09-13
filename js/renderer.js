@@ -29,7 +29,6 @@ class Renderer {
     }
 
     updateGameState() {
-        // 状態バッジ更新
         const stateBadge = this.elements.gameState;
         stateBadge.classList.remove('state-normal', 'state-bonus', 'state-art', 'state-special');
 
@@ -76,18 +75,11 @@ class Renderer {
                 break;
         }
 
-        // ゲーム数表示
         const displayG = game.inAttackTime ? game.currentG : game.artG;
-        if (displayG > 0) {
-            this.elements.currentG.textContent = `残り: ${displayG}G`;
-        } else {
-            this.elements.currentG.textContent = '残り: --G';
-        }
+        this.elements.currentG.textContent = displayG > 0 ? `残り: ${displayG}G` : '残り: --G';
     }
 
     updateReels() {
-        // リール表示（簡略版：役の名前を表示）
-        const display = game.currentRole?.name || '---';
         this.elements.reel1.textContent = game.currentRole?.color?.[0] || '-';
         this.elements.reel2.textContent = game.currentRole?.name?.substring(0, 2) || '-';
         this.elements.reel3.textContent = game.currentRole?.payment || '-';
@@ -95,8 +87,8 @@ class Renderer {
 
     updateHint() {
         const hintBox = this.elements.hintBox;
-        hintBox.classList.remove('hint-white', 'hint-blue', 'hint-yellow', 'hint-green', 
-                                   'hint-pink', 'hint-red', 'hint-purple', 'hint-rainbow', 'active');
+        hintBox.classList.remove('hint-white', 'hint-blue', 'hint-yellow', 'hint-green',
+                                 'hint-pink', 'hint-red', 'hint-purple', 'hint-rainbow', 'active');
 
         if (game.hintRole) {
             const color = game.hintRole.color;
@@ -110,7 +102,6 @@ class Renderer {
             this.elements.resultRole.textContent = game.currentRole.name;
             this.elements.resultPayment.textContent = `${game.payment}枚`;
 
-            // 矛盾判定
             if (game.hintRole && game.hintRole.name !== game.currentRole.name) {
                 this.elements.resultRole.style.color = '#ff6b6b';
                 this.elements.resultRole.textContent += ' 🎯 CHANCE!';
@@ -121,7 +112,8 @@ class Renderer {
     }
 
     updateCredit() {
-        this.elements.betDisplay.textContent = `${game.bet * BET_AMOUNT}枚`;
+        // game.betは投入枚数そのものなので、BET表示をそのまま表示する
+        this.elements.betDisplay.textContent = `${game.bet}枚`;
         this.elements.credit.textContent = game.credit;
     }
 
