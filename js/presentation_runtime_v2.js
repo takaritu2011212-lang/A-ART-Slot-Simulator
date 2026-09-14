@@ -4,15 +4,20 @@
 function installPresentationRuntime(){
   if(typeof RendererV7==='undefined' || typeof game==='undefined') return false;
   const proto=RendererV7.prototype;
-  if(proto.__presentationRuntimeV4) return true;
-  proto.__presentationRuntimeV4=true;
+  if(proto.__presentationRuntimeV5) return true;
+  proto.__presentationRuntimeV5=true;
 
   const roleOf=()=>game.currentRole?.name||'ハズレ';
   const isRareRole=()=>/強チェリー|弱チェリー|スイカ|チャンス目/.test(roleOf());
   const isPrelude=()=>!!game.bonusPending || game.fakePrecursorG>0;
+
+  // 「レア役」は個別の役をまとめた共通対応として扱う。
+  // それ以外は完全一致のみ。別の役の演出へ逃がさない。
   const matches=(item,role)=>{
     const roles=item?.roles||[];
-    return roles.includes(role) || (roles.includes('レア役') && isRareRole());
+    if(roles.includes(role)) return true;
+    if(roles.includes('レア役') && isRareRole()) return true;
+    return false;
   };
   const pick=a=>a.length?a[Math.floor(Math.random()*a.length)]:null;
 
@@ -23,27 +28,43 @@ function installPresentationRuntime(){
     const catalog=(this.catalog||[]).filter(x=>x && x.series);
     if(!catalog.length)return null;
 
+    const role=roleOf();
     const rare=isRareRole();
     const prelude=isPrelude();
-    let pool;
-    if(rare){
-      const r=Math.random();
-      const tier=r<0.08?'premium':r<0.48?'strong':'common';
-      pool=catalog.filter(x=>x.tier===tier && matches(x,roleOf()));
-    }else if(prelude){
-      pool=catalog.filter(x=>x.tier!=='premium' && matches(x,roleOf()));
-    }else{
-      pool=catalog.filter(x=>x.tier==='common' && matches(x,roleOf()));
-    }
-    if(!pool.length)pool=catalog.filter(x=>x.tier==='common' && matches(x,roleOf()));
-    if(!pool.length)pool=catalog.filter(x=>x.tier==='common');
 
+    // まず「現在の成立役に対応する演出」だけに絞る。
+    // ここを最優先にすることで、強チェリーでベル演出などが出ることを防ぐ。
+    const matched=catalog.filter(x=>matches(x,role));
+    if(!matched.length)return null;
+
+    let pool;
+
+    if(rare){
+      // レア役時は対応する通常/強/プレミアの中から選択。
+      // プレミアは成立役そのものではなくBONUS濃厚の特殊演出なので、
+      // BONUS前兆中またはBONUS成立時だけ許可する。
+      if(game.bonusPending){
+        pool=matched.filter(x=>x.tier==='premium');
+        if(!pool.length)pool=matched.filter(x=>x.tier==='strong');
+      }else{
+        const r=Math.random();
+        const tier=r<0.08?'strong':r<0.48?'strong':'common';
+        pool=matched.filter(x=>x.tier===tier);
+        if(!pool.length)pool=matched.filter(x=>x.tier==='common'||x.tier==='strong');
+      }
+    }else if(prelude){
+      // 前兆中は対応役の通常/強演出のみ。プレミアはBONUS成立時に限定。
+      pool=matched.filter(x=>x.tier!=='premium');
+    }else{
+      // 通常時は成立役に対応する通常演出のみ。
+      pool=matched.filter(x=>x.tier==='common');
+    }
+
+    // 対応役の中で選べるものがなければ、同じ役の演出へだけフォールバック。
+    if(!pool.length)pool=matched;
     const item=pick(pool);
     if(!item)return null;
 
-    // 1回の回転で選ばれた「法則」は最後まで固定する。
-    // 別の段階の法則へ勝手に飛ばすと、対応役と示唆が破綻するため、
-    // 停止ボタンでは同じパターンの進行だけを表示する。
     return {
       ...item,
       step:0,
@@ -67,7 +88,7 @@ function installPresentationRuntime(){
     const p=this.currentPresentation;
     if(!p)return;
 
-    // 停止1～3で明示的に1段ずつ進む。タイマーやsetTextでは進めない。
+    // 1回の回転で選ばれた演出法則を固定し、停止順だけを進行させる。
     p.step=Math.min(p.step+1,3);
     let text;
     if(p.step===1){
