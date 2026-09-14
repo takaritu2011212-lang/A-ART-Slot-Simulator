@@ -3,7 +3,17 @@ class SlotGameV3 {
  setSetting(s){if(s<1||s>6)return;this.setting=s;storage.setSetting(s);}
  placeBet(){if(this.state!==GAME_STATE.NORMAL||this.bet>0||this.credit<BET_AMOUNT)return false;if(!storage.removeCredit(BET_AMOUNT))return false;this.credit-=BET_AMOUNT;this.bet=BET_AMOUNT;this.payment=0;return true;}
  draw(roles){let r=Math.random(),c=0;const a=Object.values(roles);for(const x of a){c+=x.prob;if(r<c)return x;}return roles.LOSE||roles.ART_LOSE||a[a.length-1];}
- rollNormal(){if(this.state!==GAME_STATE.NORMAL||this.bet<=0||this.spinInProgress)return false;this.currentRole=this.draw(NORMAL_ROLES);this.hintRole=this.currentRole;this.payment=this.currentRole.payment||0;this.spinInProgress=true;if(!this.bonusPending)this.checkBonus();return true;}
+ rollNormal(){
+  if(this.state!==GAME_STATE.NORMAL||this.bet<=0)return false;
+  // controller owns the visible spin lock; this flag is only the game-side lock.
+  if(this.spinInProgress)return false;
+  this.currentRole=this.draw(NORMAL_ROLES);
+  this.hintRole=this.currentRole;
+  this.payment=this.currentRole.payment||0;
+  this.spinInProgress=true;
+  if(!this.bonusPending)this.checkBonus();
+  return true;
+ }
  checkBonus(){const r=BONUS_TRIGGER_RATES[this.setting],n=this.currentRole.name;let p=0;if(n.includes('チャンス目'))p=r.CHANCE;else if(n.includes('強チェリー'))p=r.STRONG_CHERRY;else if(n.includes('スイカ'))p=r.WATERMELON;else if(n.includes('弱チェリー'))p=r.WEAK_CHERRY;else if(this.currentRole.isLose)p=r.LOSE;if(Math.random()<p){this.bonusPending=true;this.bonusType=Math.random()<BONUS_BIG_RATIO?'BIG':'REG';this.bonusCountdown=2+Math.floor(Math.random()*4);this.fakePrecursorG=0;}else{let f=.045;if(n.includes('強チェリー')||n.includes('チャンス目'))f=.34;else if(n.includes('スイカ')||n.includes('弱チェリー'))f=.16;if(Math.random()<f)this.fakePrecursorG=2+Math.floor(Math.random()*3);}}
  advancePresentation(){if(this.bonusPending){this.bonusCountdown--;return this.bonusCountdown<=0;}if(this.fakePrecursorG>0){this.fakePrecursorG--;return false;}return false;}
  announceBonus(){if(!this.bonusPending)return false;this.bonusPayout=this.bonusType==='BIG'?BIG_PAYMENT:REG_PAYMENT;this.bonusRemaining=this.bonusPayout;this.bonusPending=false;this.state=this.bonusType==='BIG'?GAME_STATE.BONUS_BIG:GAME_STATE.BONUS_REG;if(this.bonusType==='BIG')storage.addBig();else storage.addReg();return true;}
