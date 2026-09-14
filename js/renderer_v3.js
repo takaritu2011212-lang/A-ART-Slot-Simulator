@@ -10,194 +10,63 @@ class RendererV3 {
             art: document.getElementById('artCount'), artG: document.getElementById('artTotalG'), avg: document.getElementById('avgArtG'),
             sanku: document.getElementById('sankuCount'), burst: document.getElementById('burstCount'), setting: document.getElementById('settingDisplay')
         };
-        this.w = [1, 2, 3].map(i => this.e['r' + i].parentElement);
-        this.t = [null, null, null];
-        this.normal = ['静かな時間が流れている。','いつもと変わらない一日だ。','何も変わらない。','店内に、いつもの音が響く。','ふと、時計を見る。','小さな物音がした。','蒼生は気にせず前を向いた。','ただ時間だけが進んでいく。'];
-        this.chance = ['……今、何か見えなかったか。','ほんの少しだけ空気が変わった。','視界の端に妙な違和感。','何かが起こる気配がする。','まだ、はっきりとは分からない。','偶然にしては少し気になる。'];
-        this.strong = ['何かがおかしい。','さっきと同じ気配がした。','これは見過ごせない。','空気が変わった。','ここまで続くなら偶然ではない。','――何か来る。'];
+        this.w = [1,2,3].map(i => this.e['r'+i].parentElement);
+        this.t = [null,null,null];
+        this.presentation = null;
+        this.normal = ['静かな時間が流れている。','いつもと変わらない一日だ。','何も変わらない。','店内に、いつもの音が響く。','ふと、時計を見る。','小さな物音がした。','蒼生は気にせず前を向いた。','ただ時間だけが進んでいく。','聞き慣れた音がする。','まだ何も始まっていない。','次の一手へ。','今日も淡々と始まる。'];
+        this.chance = ['……今、何か見えなかったか。','ほんの少しだけ空気が変わった。','視界の端に妙な違和感。','何かが起こる気配がする。','まだ、はっきりとは分からない。','偶然にしては少し気になる。','一つだけ妙なところがある。','気付けば、そこを見ていた。','静かな予告。','まだ断定はできない。','微かな光が差した。','このままでは終わらない？'];
+        this.strong = ['何かがおかしい。','さっきと同じ気配がした。','これは見過ごせない。','空気が変わった。','ここまで続くなら偶然ではない。','――何か来る。','――今のは明らかに違う。','――この先を見ろ。','――決定的な違和感。'];
+        this.loadPresentation();
+    }
+
+    loadPresentation() {
+        const css = document.createElement('link'); css.rel='stylesheet'; css.href='css/presentation_v4.css?v=20260914-1'; document.head.appendChild(css);
+        if (typeof PresentationV4 !== 'undefined') { this.presentation = new PresentationV4(this); return; }
+        const s = document.createElement('script'); s.src='js/presentation_v4.js?v=20260914-1';
+        s.onload = () => { if (typeof PresentationV4 !== 'undefined') { this.presentation = new PresentationV4(this); this.presentation.idle(); } };
+        s.onerror = () => console.warn('PresentationV4 load failed'); document.head.appendChild(s);
     }
 
     pick(a) { return a[Math.floor(Math.random() * a.length)]; }
 
-    setEffectText(s, k = 'normal', pointer = null) {
-        const x = this.e.text;
-        if (!x) return;
-        x.classList.remove('flash','effect-normal','effect-chance','effect-strong','effect-bonus');
-        void x.offsetWidth;
-        if (pointer) {
-            const escaped = pointer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            x.innerHTML = s.replace(new RegExp(escaped), `<span class="text-hint-${k}">${pointer}</span>`);
-        } else {
-            x.textContent = s;
-        }
-        x.classList.add('flash','effect-' + k);
+    setEffectText(s, k='normal', pointer=null) {
+        const x=this.e.text; if(!x)return;
+        x.classList.remove('flash','effect-normal','effect-chance','effect-strong','effect-bonus'); void x.offsetWidth;
+        if(pointer){const escaped=pointer.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');x.innerHTML=s.replace(new RegExp(escaped),`<span class="text-hint-${k}">${pointer}</span>`);}else x.textContent=s;
+        x.classList.add('flash','effect-'+k);
     }
+    clearResult(){this.e.role.textContent='---';this.e.pay.textContent='0枚';}
+    showNormalResult(){this.updateResult();}
+    symbols(){return ['7','BAR','ベル','リプ','スイカ','チェリー'];}
+    target(role,i){const n=role?.name||'';if(n.includes('BIG'))return'7';if(n.includes('REG'))return'BAR';if(n.includes('押し順ベル')||n.includes('ベル'))return'ベル';if(n.includes('リプレイ'))return'リプ';if(n.includes('スイカ'))return'スイカ';if(n.includes('チェリー'))return'チェリー';if(n.includes('チャンス'))return i===2?'7':'BAR';return i===2?'7':'BAR';}
+    setSymbol(i,s){const x=this.e['r'+i];if(!x)return;x.innerHTML=`<div class="reel-symbol">${s}</div><div class="reel-symbol">${s}</div><div class="reel-symbol">${s}</div>`;x.style.transform='translateY(-70px)';}
 
-    clearResult() { this.e.role.textContent = '---'; this.e.pay.textContent = '0枚'; }
-    showNormalResult() { this.updateResult(); }
+    startReels(){for(let i=0;i<3;i++){const w=this.w[i],x=this.e['r'+(i+1)];clearInterval(this.t[i]);this.t[i]=null;w.classList.remove('stopped','stopping');x.classList.remove('spinning');x.classList.add('spinning');this.t[i]=setInterval(()=>{const a=this.symbols(),q=()=>a[Math.floor(Math.random()*a.length)];x.innerHTML=`<div class="reel-symbol">${q()}</div><div class="reel-symbol">${q()}</div><div class="reel-symbol">${q()}</div>`;},65);}}
+    stopReel(i){const index=i-1;if(index<0||index>2)return;clearInterval(this.t[index]);this.t[index]=null;const w=this.w[index],x=this.e['r'+i];x.classList.remove('spinning');w.classList.add('stopping');this.setSymbol(i,this.target(game.currentRole,i));w.classList.add('stopped');}
+    stopAllReels(){for(let i=0;i<3;i++){clearInterval(this.t[i]);this.t[i]=null;this.w[i].classList.remove('spinning','stopping');this.e['r'+(i+1)].classList.remove('spinning');}}
 
-    symbols() { return ['7','BAR','ベル','リプ','スイカ','チェリー']; }
-
-    target(role, i) {
-        const n = role?.name || '';
-        if (n.includes('BIG')) return '7';
-        if (n.includes('REG')) return 'BAR';
-        if (n.includes('押し順ベル') || n.includes('ベル')) return 'ベル';
-        if (n.includes('リプレイ')) return 'リプ';
-        if (n.includes('スイカ')) return 'スイカ';
-        if (n.includes('チェリー')) return 'チェリー';
-        if (n.includes('チャンス')) return i === 2 ? '7' : 'BAR';
-        return i === 2 ? '7' : 'BAR';
+    kind(){if(game.bonusPending)return game.bonusCountdown<=1?'strong':'chance';if(game.fakePrecursorG>0)return game.fakePrecursorG===1?'strong':'chance';const n=game.currentRole?.name||'';if(n.includes('強チェリー')||n.includes('チャンス目'))return'maybe';if(n.includes('スイカ')||n.includes('弱チェリー'))return Math.random()<.35?'chance':'normal';return'normal';}
+    startSpinEffect(){
+        const k=this.kind(),a=k==='strong'?this.strong:(k==='chance'||k==='maybe'?this.chance:this.normal),s=this.pick(a);
+        if(k==='chance'||k==='maybe'){const words=s.match(/[一-龠ぁ-んァ-ヶA-Za-z0-9]{2,}/g)||[],pointer=words.length?this.pick(words):null;this.setEffectText(s,k==='maybe'?'chance':k,pointer);}else this.setEffectText(s,k);
+        this.presentation?.spinStart(game.currentRole);
     }
-
-    setSymbol(i, s) {
-        const x = this.e['r' + i];
-        if (!x) return;
-        x.innerHTML = `<div class="reel-symbol">${s}</div><div class="reel-symbol">${s}</div><div class="reel-symbol">${s}</div>`;
-        x.style.transform = 'translateY(-70px)';
+    onReelStopped(i){
+        const k=this.kind();let s;
+        if(game.bonusPending&&game.bonusCountdown<=1&&i===3)s='――その先に、何かがある。';
+        else if(game.fakePrecursorG>0&&i===3)s='――まだ終わっていない。';
+        else if(k==='strong')s=i===1?'確かに、今のは違った。':i===2?'まだ気配が消えない。':'――何か来る。';
+        else if(k==='chance')s=i===1?'……何かいる？':i===2?'もう一度、同じ気配がした。':'――気のせいではないのかもしれない。';
+        else s=i===1?'蒼生は、ふと視線を上げた。':i===2?'何かの気配がした。':'――何事もなく、時が流れた。';
+        if(k==='chance'||k==='maybe'){const words=s.match(/[一-龠ぁ-んァ-ヶA-Za-z0-9]{2,}/g)||[],pointer=words.length?this.pick(words):null;this.setEffectText(s,k==='maybe'?'chance':k,pointer);}else this.setEffectText(s,k);
+        this.presentation?.reelStop(i,game.currentRole);
     }
+    showBonus(type){this.setEffectText(type==='BIG'?'――BONUS―― BIG 250枚':'――BONUS―― REG 70枚','bonus');this.e.role.textContent=type;this.e.pay.textContent=type==='BIG'?'残り250枚':'残り70枚';this.presentation?.bonus(type);}
+    showChallenge(){this.setEffectText('5GのART CHALLENGE。自分で回して引き当てろ。','chance');this.e.role.textContent='ART CHALLENGE';this.e.pay.textContent=`残り${game.challengeG}G`;this.presentation?.challenge();}
 
-    startReels() {
-        for (let i = 0; i < 3; i++) {
-            const w = this.w[i];
-            const x = this.e['r' + (i + 1)];
-            clearInterval(this.t[i]);
-            this.t[i] = null;
-            w.classList.remove('stopped', 'stopping');
-            x.classList.remove('spinning');
-            x.classList.add('spinning');
-
-            this.t[i] = setInterval(() => {
-                const a = this.symbols();
-                const q = () => a[Math.floor(Math.random() * a.length)];
-                x.innerHTML = `<div class="reel-symbol">${q()}</div><div class="reel-symbol">${q()}</div><div class="reel-symbol">${q()}</div>`;
-            }, 65);
-        }
-    }
-
-    stopReel(i) {
-        const index = i - 1;
-        if (index < 0 || index > 2) return;
-        clearInterval(this.t[index]);
-        this.t[index] = null;
-        const w = this.w[index];
-        const x = this.e['r' + i];
-        x.classList.remove('spinning');
-        w.classList.add('stopping');
-        this.setSymbol(i, this.target(game.currentRole, i));
-        w.classList.add('stopped');
-    }
-
-    stopAllReels() {
-        for (let i = 0; i < 3; i++) {
-            clearInterval(this.t[i]);
-            this.t[i] = null;
-            this.w[i].classList.remove('spinning', 'stopping');
-            this.e['r' + (i + 1)].classList.remove('spinning');
-        }
-    }
-
-    kind() {
-        if (game.bonusPending) return game.bonusCountdown <= 1 ? 'strong' : 'chance';
-        if (game.fakePrecursorG > 0) return game.fakePrecursorG === 1 ? 'strong' : 'chance';
-        const n = game.currentRole?.name || '';
-        if (n.includes('強チェリー') || n.includes('チャンス目')) return 'maybe';
-        if (n.includes('スイカ') || n.includes('弱チェリー')) return Math.random() < .35 ? 'chance' : 'normal';
-        return 'normal';
-    }
-
-    startSpinEffect() {
-        const k = this.kind();
-        const a = k === 'strong' ? this.strong : (k === 'chance' || k === 'maybe' ? this.chance : this.normal);
-        const s = this.pick(a);
-
-        // 文字そのものの一部を青い光が指す。上のヒント枠に答えを出す方式にはしない。
-        if (k === 'chance' || k === 'maybe') {
-            const words = s.match(/[一-龠ぁ-んァ-ヶA-Za-z0-9]{2,}/g) || [];
-            const pointer = words.length ? words[Math.floor(Math.random() * words.length)] : null;
-            this.setEffectText(s, k === 'maybe' ? 'chance' : k, pointer);
-        } else {
-            this.setEffectText(s, k);
-        }
-    }
-
-    onReelStopped(i) {
-        const k = this.kind();
-        let s;
-        if (game.bonusPending && game.bonusCountdown <= 1 && i === 3) s = '――その先に、何かがある。';
-        else if (game.fakePrecursorG > 0 && i === 3) s = '――まだ終わっていない。';
-        else if (k === 'strong') s = i === 1 ? '確かに、今のは違った。' : i === 2 ? 'まだ気配が消えない。' : '――何か来る。';
-        else if (k === 'chance') s = i === 1 ? '……何かいる？' : i === 2 ? 'もう一度、同じ気配がした。' : '――気のせいではないのかもしれない。';
-        else s = i === 1 ? '蒼生は、ふと視線を上げた。' : i === 2 ? '何かの気配がした。' : '――何事もなく、時が流れた。';
-
-        if (k === 'chance' || k === 'maybe') {
-            const words = s.match(/[一-龠ぁ-んァ-ヶA-Za-z0-9]{2,}/g) || [];
-            const pointer = words.length ? words[Math.floor(Math.random() * words.length)] : null;
-            this.setEffectText(s, k === 'maybe' ? 'chance' : k, pointer);
-        } else {
-            this.setEffectText(s, k);
-        }
-    }
-
-    showBonus(type) {
-        this.setEffectText(type === 'BIG' ? '――BONUS―― BIG 250枚' : '――BONUS―― REG 70枚', 'bonus');
-        this.e.role.textContent = type;
-        this.e.pay.textContent = type === 'BIG' ? '残り250枚' : '残り70枚';
-    }
-
-    showChallenge() {
-        this.setEffectText('5GのART CHALLENGE。自分で回して引き当てろ。', 'chance');
-        this.e.role.textContent = 'ART CHALLENGE';
-        this.e.pay.textContent = `残り${game.challengeG}G`;
-    }
-
-    updateState() {
-        const m = { NORMAL:['通常時','state-normal'], BONUS_BIG:['BIG','state-bonus'], BONUS_REG:['REG','state-bonus'], CHALLENGE:['ART CHALLENGE','state-art'], ART:['ART','state-art'] };
-        const x = m[game.state] || ['通常時','state-normal'];
-        this.e.gameState.textContent = x[0];
-        this.e.gameState.className = 'state-badge ' + x[1];
-        const g = game.state === GAME_STATE.CHALLENGE ? game.challengeG : game.state === GAME_STATE.BONUS_BIG || game.state === GAME_STATE.BONUS_REG ? Math.ceil(game.bonusRemaining / Math.max(1, BONUS_BELL_PAYMENT)) : game.artG;
-        this.e.currentG.textContent = g > 0 ? `残り: ${g}G` : '残り: --G';
-    }
-
-    updateHint() {
-        this.e.hint.className = 'hint-box';
-        if (game.currentRole) {
-            this.e.hint.classList.add('hint-' + (game.currentRole.color || 'white'), 'active');
-            if (game.bonusPending) this.e.hint.textContent = game.bonusCountdown <= 1 ? '本前兆・最終局面' : '前兆継続';
-            else if (game.fakePrecursorG > 0) this.e.hint.textContent = '前兆示唆';
-            else if (game.state === GAME_STATE.CHALLENGE) this.e.hint.textContent = game.challengeSmall ? '小役成立' : '通常';
-            else this.e.hint.textContent = '予告';
-        }
-    }
-
-    updateResult() {
-        if (game.spinInProgress) return;
-        if (game.state === GAME_STATE.BONUS_BIG || game.state === GAME_STATE.BONUS_REG) {
-            this.e.role.textContent = game.bonusType;
-            this.e.pay.textContent = `残り${game.bonusRemaining}枚`;
-            return;
-        }
-        if (game.state === GAME_STATE.CHALLENGE) {
-            this.e.role.textContent = 'ART CHALLENGE';
-            this.e.pay.textContent = `残り${game.challengeG}G`;
-            return;
-        }
-        if (game.currentRole) {
-            this.e.role.textContent = game.currentRole.name;
-            this.e.pay.textContent = `${game.payment || 0}枚`;
-        }
-    }
-
-    update() {
-        this.updateState(); this.updateHint(); this.updateResult();
-        this.e.bet.textContent = `${game.bet}枚`; this.e.credit.textContent = game.credit;
-        const s = storage.getStats();
-        this.e.totalGames.textContent = s.totalGames; this.e.totalBet.textContent = s.totalBet; this.e.totalPayout.textContent = s.totalPayout;
-        this.e.percentage.textContent = s.percentage + '%'; this.e.big.textContent = s.bigCount; this.e.reg.textContent = s.regCount;
-        this.e.art.textContent = s.artCount; this.e.artG.textContent = s.artTotalG; this.e.avg.textContent = s.avgArt + 'G';
-        this.e.sanku.textContent = s.sankuCount; this.e.burst.textContent = s.burstCount; this.e.setting.textContent = s.setting;
-    }
+    updateState(){const m={NORMAL:['通常時','state-normal'],BONUS_BIG:['BIG','state-bonus'],BONUS_REG:['REG','state-bonus'],CHALLENGE:['ART CHALLENGE','state-art'],ART:['ART','state-art']},x=m[game.state]||['通常時','state-normal'];this.e.gameState.textContent=x[0];this.e.gameState.className='state-badge '+x[1];const g=game.state===GAME_STATE.CHALLENGE?game.challengeG:game.state===GAME_STATE.BONUS_BIG||game.state===GAME_STATE.BONUS_REG?Math.ceil(game.bonusRemaining/Math.max(1,BONUS_BELL_PAYMENT)):game.artG;this.e.currentG.textContent=g>0?`残り: ${g}G`:'残り: --G';}
+    updateHint(){this.e.hint.className='hint-box';if(game.currentRole){this.e.hint.classList.add('hint-'+(game.currentRole.color||'white'),'active');if(game.bonusPending)this.e.hint.textContent=game.bonusCountdown<=1?'本前兆・最終局面':'前兆継続';else if(game.fakePrecursorG>0)this.e.hint.textContent='前兆示唆';else if(game.state===GAME_STATE.CHALLENGE)this.e.hint.textContent=game.challengeSmall?'小役成立':'通常';else this.e.hint.textContent='予告';}}
+    updateResult(){if(game.spinInProgress)return;if(game.state===GAME_STATE.BONUS_BIG||game.state===GAME_STATE.BONUS_REG){this.e.role.textContent=game.bonusType;this.e.pay.textContent=`残り${game.bonusRemaining}枚`;return;}if(game.state===GAME_STATE.CHALLENGE){this.e.role.textContent='ART CHALLENGE';this.e.pay.textContent=`残り${game.challengeG}G`;return;}if(game.currentRole){this.e.role.textContent=game.currentRole.name;this.e.pay.textContent=`${game.payment||0}枚`;}}
+    update(){this.updateState();this.updateHint();this.updateResult();this.e.bet.textContent=`${game.bet}枚`;this.e.credit.textContent=game.credit;const s=storage.getStats();this.e.totalGames.textContent=s.totalGames;this.e.totalBet.textContent=s.totalBet;this.e.totalPayout.textContent=s.totalPayout;this.e.percentage.textContent=s.percentage+'%';this.e.big.textContent=s.bigCount;this.e.reg.textContent=s.regCount;this.e.art.textContent=s.artCount;this.e.artG.textContent=s.artTotalG;this.e.avg.textContent=s.avgArt+'G';this.e.sanku.textContent=s.sankuCount;this.e.burst.textContent=s.burstCount;this.e.setting.textContent=s.setting;}
 }
-
-const renderer = new RendererV3();
+const renderer=new RendererV3();
