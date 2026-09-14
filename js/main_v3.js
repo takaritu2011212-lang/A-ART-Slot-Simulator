@@ -38,22 +38,15 @@ class GameControllerV3 {
         btn.textContent = 'ログ ON';
         btn.title = 'エラー診断ログの表示／非表示';
         btn.addEventListener('click', () => {
+            // index.html 側の正式なデバッグ状態管理を使う。
+            // hidden属性とclassの二重管理で「押してもログが出ない」状態になっていた。
+            if (typeof window.__AART_SET_DEBUG__ === 'function') {
+                window.__AART_SET_DEBUG__(!window.__AART_DEBUG__?.enabled);
+                return;
+            }
             const hidden = panel.classList.toggle('aart-debug-hidden');
             btn.textContent = hidden ? 'ログ ON' : 'ログ OFF';
             btn.classList.toggle('active', !hidden);
-            if (!hidden) {
-                const events = window.__AART_DEBUG__?.events || [];
-                const box = document.getElementById('aartDebugLog');
-                if (box && !box.children.length) {
-                    for (const item of events) {
-                        const row = document.createElement('div');
-                        row.className = 'aart-debug-row ' + (item.type === 'ERROR' ? 'error' : '');
-                        row.textContent = `[${item.time}] ${item.type} ${item.message}${item.detail ? ' | ' + item.detail : ''}`;
-                        box.appendChild(row);
-                    }
-                }
-                panel.scrollTop = panel.scrollHeight;
-            }
         });
         document.body.appendChild(btn);
     }
@@ -134,7 +127,10 @@ class GameControllerV3 {
             if (state === GAME_STATE.NORMAL) {
                 game.spinInProgress = false;
                 const payout = game.currentRole?.payment || 0;
-                game.credit += payout; storage.addGame(game.bet, payout); game.bet = 0;
+                // ベット時にstorage側から3枚を減算済みなので、通常時の払出も
+                // storage.addGame()で同時に保存する。これまでgame.creditだけ増えていたため、
+                // その直後のMAXBETがstorage側の古いクレジットを見て失敗していた。
+                game.credit += payout; storage.addGame(game.bet, payout, payout); game.bet = 0;
                 const announce = game.advancePresentation();
                 if (announce) { game.announceBonus(); renderer.showBonus(game.bonusType); }
                 else renderer.showNormalResult();
