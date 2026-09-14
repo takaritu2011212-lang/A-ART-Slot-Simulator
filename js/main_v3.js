@@ -4,6 +4,7 @@ class GameControllerV3 {
         this.stoppedReels = new Set();
         this.initializeElements();
         this.attach();
+        this.setupDebugToggle();
         this.load();
         this.debug('INIT', 'GameControllerV3 initialized');
     }
@@ -26,6 +27,35 @@ class GameControllerV3 {
         };
         for (const [name, el] of Object.entries(this.elements)) if (!el) throw new Error(`DOM element missing: ${name}`);
         this.debug('DOM', 'All controller elements found');
+    }
+    setupDebugToggle() {
+        const panel = document.getElementById('aartDebugPanel');
+        if (!panel) return;
+        panel.classList.add('aart-debug-hidden');
+        const btn = document.createElement('button');
+        btn.id = 'aartDebugToggle';
+        btn.type = 'button';
+        btn.textContent = 'ログ ON';
+        btn.title = 'エラー診断ログの表示／非表示';
+        btn.addEventListener('click', () => {
+            const hidden = panel.classList.toggle('aart-debug-hidden');
+            btn.textContent = hidden ? 'ログ ON' : 'ログ OFF';
+            btn.classList.toggle('active', !hidden);
+            if (!hidden) {
+                const events = window.__AART_DEBUG__?.events || [];
+                const box = document.getElementById('aartDebugLog');
+                if (box && !box.children.length) {
+                    for (const item of events) {
+                        const row = document.createElement('div');
+                        row.className = 'aart-debug-row ' + (item.type === 'ERROR' ? 'error' : '');
+                        row.textContent = `[${item.time}] ${item.type} ${item.message}${item.detail ? ' | ' + item.detail : ''}`;
+                        box.appendChild(row);
+                    }
+                }
+                panel.scrollTop = panel.scrollHeight;
+            }
+        });
+        document.body.appendChild(btn);
     }
     attach() {
         this.debug('ATTACH', 'Binding control events');
@@ -71,7 +101,7 @@ class GameControllerV3 {
             else if (game.state === GAME_STATE.BONUS_BIG || game.state === GAME_STATE.BONUS_REG) ok = game.startBonusSpin();
             else if (game.state === GAME_STATE.CHALLENGE) ok = game.startChallengeSpin();
             this.debug('GAME', `game start returned ${ok}`, `spinInProgress=${game.spinInProgress}`);
-            if (!ok) return this.debug('BLOCK', 'Game rejected lever input');
+            if (!ok) return this.debug('BLOCK', `Game rejected lever input | state=${game.state}, bet=${game.bet}, spinInProgress=${game.spinInProgress}`);
             this.isSpinning = true; this.stoppedReels.clear(); this.refreshButtons(); this.debug('REELS', 'Controller entered spinning state');
             this.debug('RENDER', 'clearResult'); renderer.clearResult();
             this.debug('RENDER', 'startReels'); renderer.startReels();
@@ -98,16 +128,24 @@ class GameControllerV3 {
         if (!this.isSpinning) return;
         try {
             this.isSpinning = false;
-            // 通常時スピンもゲーム側ロックを必ず解除する。これがないと2回目以降のレバーが拒否される。
-            game.spinInProgress = false;
-            renderer.stopAllReels(); const state = game.state; this.debug('END', `Ending spin state=${state}`);
+            renderer.stopAllReels();
+            const state = game.state;
+            this.debug('END', `Ending spin state=${state}`);
             if (state === GAME_STATE.NORMAL) {
-                const payout = game.currentRole?.payment || 0; game.credit += payout; storage.addGame(game.bet, payout); game.bet = 0;
-                const announce = game.advancePresentation(); if (announce) { game.announceBonus(); renderer.showBonus(game.bonusType); } else renderer.showNormalResult();
+                game.spinInProgress = false;
+                const payout = game.currentRole?.payment || 0;
+                game.credit += payout; storage.addGame(game.bet, payout); game.bet = 0;
+                const announce = game.advancePresentation();
+                if (announce) { game.announceBonus(); renderer.showBonus(game.bonusType); }
+                else renderer.showNormalResult();
             } else if (state === GAME_STATE.BONUS_BIG || state === GAME_STATE.BONUS_REG) {
-                const result = game.finishBonusSpin(); if (result === 'CHALLENGE') renderer.showChallenge();
+                const result = game.finishBonusSpin();
+                if (result === 'CHALLENGE') renderer.showChallenge();
             } else if (state === GAME_STATE.CHALLENGE) {
-                const result = game.finishChallengeSpin(); if (result === 'ART') renderer.setEffectText('――ART、突入。', 'bonus'); else if (result === 'NORMAL') renderer.setEffectText('5G、終了。通常時へ戻る。', 'normal'); else renderer.setEffectText(`残り${game.challengeG}G。まだ終わらない。`, 'chance');
+                const result = game.finishChallengeSpin();
+                if (result === 'ART') renderer.setEffectText('――ART、突入。', 'bonus');
+                else if (result === 'NORMAL') renderer.setEffectText('5G、終了。通常時へ戻る。', 'normal');
+                else renderer.setEffectText(`残り${game.challengeG}G。まだ終わらない。`, 'chance');
             }
             renderer.update(); this.refreshButtons(); this.debug('END', 'Spin finished');
         } catch (error) { this.fail('END-001', error); this.isSpinning = false; game.spinInProgress = false; this.stoppedReels.clear(); try { renderer.stopAllReels(); } catch (_) {} this.refreshButtons(); }
