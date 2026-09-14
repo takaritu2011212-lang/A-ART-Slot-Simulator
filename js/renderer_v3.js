@@ -19,12 +19,17 @@ class RendererV3 {
 
     pick(a) { return a[Math.floor(Math.random() * a.length)]; }
 
-    setEffectText(s, k = 'normal') {
+    setEffectText(s, k = 'normal', pointer = null) {
         const x = this.e.text;
         if (!x) return;
         x.classList.remove('flash','effect-normal','effect-chance','effect-strong','effect-bonus');
         void x.offsetWidth;
-        x.textContent = s;
+        if (pointer) {
+            const escaped = pointer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            x.innerHTML = s.replace(new RegExp(escaped), `<span class="text-hint-${k}">${pointer}</span>`);
+        } else {
+            x.textContent = s;
+        }
         x.classList.add('flash','effect-' + k);
     }
 
@@ -59,7 +64,8 @@ class RendererV3 {
             clearInterval(this.t[i]);
             this.t[i] = null;
             w.classList.remove('stopped', 'stopping');
-            w.classList.add('spinning');
+            x.classList.remove('spinning');
+            x.classList.add('spinning');
 
             this.t[i] = setInterval(() => {
                 const a = this.symbols();
@@ -75,7 +81,8 @@ class RendererV3 {
         clearInterval(this.t[index]);
         this.t[index] = null;
         const w = this.w[index];
-        w.classList.remove('spinning');
+        const x = this.e['r' + i];
+        x.classList.remove('spinning');
         w.classList.add('stopping');
         this.setSymbol(i, this.target(game.currentRole, i));
         w.classList.add('stopped');
@@ -85,7 +92,8 @@ class RendererV3 {
         for (let i = 0; i < 3; i++) {
             clearInterval(this.t[i]);
             this.t[i] = null;
-            this.w[i].classList.remove('spinning');
+            this.w[i].classList.remove('spinning', 'stopping');
+            this.e['r' + (i + 1)].classList.remove('spinning');
         }
     }
 
@@ -101,7 +109,16 @@ class RendererV3 {
     startSpinEffect() {
         const k = this.kind();
         const a = k === 'strong' ? this.strong : (k === 'chance' || k === 'maybe' ? this.chance : this.normal);
-        this.setEffectText(this.pick(a), k === 'maybe' ? 'chance' : k);
+        const s = this.pick(a);
+
+        // 文字そのものの一部を青い光が指す。上のヒント枠に答えを出す方式にはしない。
+        if (k === 'chance' || k === 'maybe') {
+            const words = s.match(/[一-龠ぁ-んァ-ヶA-Za-z0-9]{2,}/g) || [];
+            const pointer = words.length ? words[Math.floor(Math.random() * words.length)] : null;
+            this.setEffectText(s, k === 'maybe' ? 'chance' : k, pointer);
+        } else {
+            this.setEffectText(s, k);
+        }
     }
 
     onReelStopped(i) {
@@ -112,7 +129,14 @@ class RendererV3 {
         else if (k === 'strong') s = i === 1 ? '確かに、今のは違った。' : i === 2 ? 'まだ気配が消えない。' : '――何か来る。';
         else if (k === 'chance') s = i === 1 ? '……何かいる？' : i === 2 ? 'もう一度、同じ気配がした。' : '――気のせいではないのかもしれない。';
         else s = i === 1 ? '蒼生は、ふと視線を上げた。' : i === 2 ? '何かの気配がした。' : '――何事もなく、時が流れた。';
-        this.setEffectText(s, k);
+
+        if (k === 'chance' || k === 'maybe') {
+            const words = s.match(/[一-龠ぁ-んァ-ヶA-Za-z0-9]{2,}/g) || [];
+            const pointer = words.length ? words[Math.floor(Math.random() * words.length)] : null;
+            this.setEffectText(s, k === 'maybe' ? 'chance' : k, pointer);
+        } else {
+            this.setEffectText(s, k);
+        }
     }
 
     showBonus(type) {
