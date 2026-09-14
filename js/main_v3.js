@@ -97,7 +97,10 @@ class GameControllerV3 {
     endSpin() {
         if (!this.isSpinning) return;
         try {
-            this.isSpinning = false; renderer.stopAllReels(); const state = game.state; this.debug('END', `Ending spin state=${state}`);
+            this.isSpinning = false;
+            // 通常時スピンもゲーム側ロックを必ず解除する。これがないと2回目以降のレバーが拒否される。
+            game.spinInProgress = false;
+            renderer.stopAllReels(); const state = game.state; this.debug('END', `Ending spin state=${state}`);
             if (state === GAME_STATE.NORMAL) {
                 const payout = game.currentRole?.payment || 0; game.credit += payout; storage.addGame(game.bet, payout); game.bet = 0;
                 const announce = game.advancePresentation(); if (announce) { game.announceBonus(); renderer.showBonus(game.bonusType); } else renderer.showNormalResult();
