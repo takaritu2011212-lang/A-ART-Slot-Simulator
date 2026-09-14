@@ -1,5 +1,15 @@
 (function(){
   function install(){
+    function patchRendererCompatibility(){
+      if(typeof RendererV7==='undefined') return false;
+      const proto=RendererV7.prototype;
+      if(typeof proto.setEffectText!=='function' && typeof proto.setText==='function'){
+        proto.setEffectText=function(text,kind='normal'){this.setText(text,kind);};
+      }
+      return true;
+    }
+    patchRendererCompatibility();
+
     const style=document.createElement('style');
     style.id='aart-ui-fixes-style';
     style.textContent=`
@@ -70,7 +80,6 @@
         const pool=this.catalog.filter(x=>x.tier===tier);
         const compatible=pool.filter(x=>x.roles.includes(actual));
         const mismatch=pool.filter(x=>!x.roles.includes(actual));
-        // 通常時の役違い演出は原則抑える。法則ハズレはレア役など重要局面でだけ意味を持つ。
         if(compatible.length&&mismatch.length){
           const mismatchRate=this.isRare()?0.08:0.02;
           return this.pick(Math.random()<mismatchRate?mismatch:compatible);
