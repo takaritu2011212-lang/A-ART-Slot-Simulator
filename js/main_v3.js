@@ -51,9 +51,11 @@ class GameControllerV3 {
         this.elements.maxBetBtn.disabled = busy || !normal || hasBet;
         this.elements.startBtn.disabled = busy || (normal && !hasBet) || game.state === GAME_STATE.ART;
 
+        // 停止ボタンは「disabled」にせず、クリック側で順番を判定する。
+        // ブラウザの disabled 状態にイベント処理を巻き込ませない。
         this.elements.stop1Btn.disabled = !busy || this.stoppedReels.has(1);
-        this.elements.stop2Btn.disabled = !busy || !this.stoppedReels.has(1) || this.stoppedReels.has(2);
-        this.elements.stop3Btn.disabled = !busy || !this.stoppedReels.has(1) || this.stoppedReels.has(3);
+        this.elements.stop2Btn.disabled = !busy;
+        this.elements.stop3Btn.disabled = !busy;
     }
 
     addCredit() {
@@ -70,7 +72,7 @@ class GameControllerV3 {
             alert('クレジット不足です');
             return;
         }
-        renderer.setEffectText('レバーを叩いてください。');
+        renderer.setEffectText('レバーを叩いてください。', 'normal');
         renderer.update();
         this.refreshButtons();
     }
@@ -90,7 +92,6 @@ class GameControllerV3 {
 
             if (!ok) return;
 
-            // ここを最優先で確定させる。リール開始後の表示更新で止まらない構造にする。
             this.isSpinning = true;
             this.stoppedReels.clear();
             this.refreshButtons();
@@ -103,13 +104,18 @@ class GameControllerV3 {
             this.isSpinning = false;
             this.stoppedReels.clear();
             game.spinInProgress = false;
+            renderer.stopAllReels();
+            renderer.setEffectText('リール制御でエラーが発生しました。', 'strong');
             this.refreshButtons();
         }
     }
 
     stop(n) {
         if (!this.isSpinning || this.stoppedReels.has(n)) return;
-        if (n !== 1 && !this.stoppedReels.has(1)) return;
+        if (n > 1 && !this.stoppedReels.has(n - 1)) {
+            renderer.setEffectText('まだそのリールは止められない。', 'chance');
+            return;
+        }
 
         try {
             this.stoppedReels.add(n);
@@ -122,6 +128,9 @@ class GameControllerV3 {
             }
         } catch (error) {
             console.error(`停止${n}処理エラー:`, error);
+            this.stoppedReels.delete(n);
+            renderer.setEffectText(`停止${n}でエラーが発生しました。`, 'strong');
+            this.refreshButtons();
         }
     }
 
@@ -170,6 +179,7 @@ class GameControllerV3 {
         game.reset();
         this.isSpinning = false;
         this.stoppedReels.clear();
+        renderer.stopAllReels();
         this.refreshButtons();
         renderer.update();
     }
