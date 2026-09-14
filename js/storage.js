@@ -35,8 +35,6 @@ class GameStorage {
     resetData() { this.data = this.getDefaultData(); this.saveData(); }
     setSetting(setting) { this.data.setting = setting; this.saveData(); }
 
-    // ベット時点でクレジットを確定して減算する。
-    // これにより、ベット中にリロードしても3枚が復活しない。
     removeCredit(amount) {
         if (!Number.isFinite(amount) || amount <= 0 || this.data.credit < amount) return false;
         this.data.credit -= amount;
@@ -44,16 +42,17 @@ class GameStorage {
         return true;
     }
 
-    // 通常ゲーム終了時は、ベット分はすでにベット時に減算済みなので、
-    // ここではゲーム数・総ベット・総払出の記録だけを更新する。
+    // ベット分はremoveCredit()で先に減算済み。
+    // 通常ゲームの払出はここでクレジットにも反映し、表示中のgame.creditと
+    // localStorageのcreditが食い違わないようにする。
     addGame(bet, payout) {
         this.data.totalGames++;
         this.data.totalBet += bet;
         this.data.totalPayout += payout;
+        this.data.credit += payout;
         this.saveData();
     }
 
-    // ボーナス中など、ゲーム数を増やさず払出だけを記録する。
     addPayout(amount) {
         if (!Number.isFinite(amount) || amount <= 0) return;
         this.data.totalPayout += amount;
