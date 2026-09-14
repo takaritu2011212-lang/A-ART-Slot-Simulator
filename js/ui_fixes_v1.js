@@ -17,14 +17,12 @@
     `;
     document.head.appendChild(style);
 
-    // index側とmain側で二重生成されるログボタンを一本化。
     const toggles=[...document.querySelectorAll('#aartDebugToggle')];
     const btn=toggles[0];
     toggles.slice(1).forEach(x=>x.remove());
     const panel=document.getElementById('aartDebugPanel');
     if(btn){btn.classList.add('aart-debug-ready');}
 
-    // ログ関数は保存と表示を同時に行い、ON中は常に末尾まで追従する。
     if(window.__AART_LOG__ && !window.__AART_LOG__._patched){
       const old=window.__AART_LOG__;
       const patched=function(type,message,detail){
@@ -37,7 +35,6 @@
       window.__AART_LOG__=patched;
     }
 
-    // MAXBETはpointerdownでも拾う。通常のclick側が二重に処理してもbet>0で安全に無視される。
     const max=document.getElementById('maxBetBtn');
     if(max){
       max.addEventListener('pointerdown',function(e){
@@ -49,18 +46,36 @@
       });
     }
 
-    // 前兆中は通常時より明確に騒がしくする。法則ハズレ自体は表示しない。
     if(typeof RendererV7!=='undefined'){
       const proto=RendererV7.prototype;
+      const roleOf=()=>{
+        const n=game.currentRole?.name||'';
+        if(n.includes('チャンス目'))return'チャンス目';
+        if(n.includes('強チェリー'))return'強チェリー';
+        if(n.includes('弱チェリー'))return'弱チェリー';
+        if(n.includes('スイカ'))return'スイカ';
+        if(n.includes('リプレイ'))return'リプレイ';
+        if(n.includes('ベル'))return'ベル';
+        return'ハズレ';
+      };
       proto.choosePresentation=function(){
         const precursor=!!game.bonusPending || game.fakePrecursorG>0;
+        const actual=roleOf();
         const r=Math.random();
         if(precursor){
           const tier=r<0.68?'strong':r<0.88?'premium':'common';
           return this.pick(this.catalog.filter(x=>x.tier===tier));
         }
         const tier=r<0.30?'strong':'common';
-        return this.pick(this.catalog.filter(x=>x.tier===tier));
+        const pool=this.catalog.filter(x=>x.tier===tier);
+        const compatible=pool.filter(x=>x.roles.includes(actual));
+        const mismatch=pool.filter(x=>!x.roles.includes(actual));
+        // 通常時の役違い演出は原則抑える。法則ハズレはレア役など重要局面でだけ意味を持つ。
+        if(compatible.length&&mismatch.length){
+          const mismatchRate=this.isRare()?0.08:0.02;
+          return this.pick(Math.random()<mismatchRate?mismatch:compatible);
+        }
+        return this.pick(compatible.length?compatible:pool);
       };
       proto.startSpinEffect=function(){
         if(this.pendingMismatch){
