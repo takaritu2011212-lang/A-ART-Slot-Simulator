@@ -17,19 +17,14 @@
     `;
     document.head.appendChild(style);
 
+    // index側とmain側で二重生成されるログボタンを一本化。
     const toggles=[...document.querySelectorAll('#aartDebugToggle')];
     const btn=toggles[0];
     toggles.slice(1).forEach(x=>x.remove());
     const panel=document.getElementById('aartDebugPanel');
-    if(btn){
-      btn.onclick=function(){
-        const enabled=!window.__AART_DEBUG__?.enabled;
-        if(window.__AART_SET_DEBUG__) window.__AART_SET_DEBUG__(enabled);
-        else if(panel) panel.hidden=!enabled;
-        btn.textContent=enabled?'ログ OFF':'ログ ON';
-        btn.classList.toggle('debug-on',enabled);
-      };
-    }
+    if(btn){btn.classList.add('aart-debug-ready');}
+
+    // ログ関数は保存と表示を同時に行い、ON中は常に末尾まで追従する。
     if(window.__AART_LOG__ && !window.__AART_LOG__._patched){
       const old=window.__AART_LOG__;
       const patched=function(type,message,detail){
@@ -42,6 +37,7 @@
       window.__AART_LOG__=patched;
     }
 
+    // MAXBETはpointerdownでも拾う。通常のclick側が二重に処理してもbet>0で安全に無視される。
     const max=document.getElementById('maxBetBtn');
     if(max){
       max.addEventListener('pointerdown',function(e){
@@ -53,6 +49,7 @@
       });
     }
 
+    // 前兆中は通常時より明確に騒がしくする。法則ハズレ自体は表示しない。
     if(typeof RendererV7!=='undefined'){
       const proto=RendererV7.prototype;
       proto.choosePresentation=function(){
