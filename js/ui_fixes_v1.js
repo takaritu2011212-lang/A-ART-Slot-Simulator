@@ -42,6 +42,17 @@
       window.__AART_LOG__=patched;
     }
 
+    const max=document.getElementById('maxBetBtn');
+    if(max){
+      max.addEventListener('pointerdown',function(e){
+        if(max.disabled)return;
+        if(window.gameController && !window.gameController.isSpinning && game.state===GAME_STATE.NORMAL && game.bet===0){
+          e.preventDefault();
+          window.gameController.bet();
+        }
+      });
+    }
+
     if(typeof RendererV7!=='undefined'){
       const proto=RendererV7.prototype;
       proto.choosePresentation=function(){
