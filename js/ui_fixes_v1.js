@@ -81,6 +81,8 @@
           const tier=r<0.68?'strong':r<0.88?'premium':'common';
           return this.pick(this.catalog.filter(x=>x.tier===tier));
         }
+        // 通常時もほぼ毎ゲーム演出を出す。プレイヤーが法則を覚えられる密度を優先。
+        // 強演出は従来の30%を維持し、通常演出の発生を基本化する。
         const tier=r<0.30?'strong':'common';
         const pool=this.catalog.filter(x=>x.tier===tier);
         const compatible=pool.filter(x=>matchesRole(x,actual));
