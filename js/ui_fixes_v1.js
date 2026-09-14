@@ -68,6 +68,11 @@
         if(n.includes('ベル'))return'ベル';
         return'ハズレ';
       };
+      const matchesRole=(entry,actual)=>{
+        if(entry.roles.includes(actual))return true;
+        if(entry.roles.includes('レア役'))return ['弱チェリー','強チェリー','スイカ','チャンス目'].includes(actual);
+        return false;
+      };
       proto.choosePresentation=function(){
         const precursor=!!game.bonusPending || game.fakePrecursorG>0;
         const actual=roleOf();
@@ -78,8 +83,8 @@
         }
         const tier=r<0.30?'strong':'common';
         const pool=this.catalog.filter(x=>x.tier===tier);
-        const compatible=pool.filter(x=>x.roles.includes(actual));
-        const mismatch=pool.filter(x=>!x.roles.includes(actual));
+        const compatible=pool.filter(x=>matchesRole(x,actual));
+        const mismatch=pool.filter(x=>!matchesRole(x,actual));
         if(compatible.length&&mismatch.length){
           const mismatchRate=this.isRare()?0.08:0.02;
           return this.pick(Math.random()<mismatchRate?mismatch:compatible);
